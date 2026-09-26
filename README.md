@@ -17,45 +17,57 @@ A virtual farm simulator that lets farmers create farms, configure zones, run wh
 - **Scenario Comparison** — Compare multiple simulations side-by-side
 - **AI Explanations** — Get natural language analysis from the backend AI
 
+## System Architecture
+
+FarmSim AI consists of 4 tightly integrated subsystems:
+1. **Frontend (`src/`)**: React + TypeScript + Vite + Tailwind CSS + Leaflet GIS maps. Interactive Boundary Editor, Area & Shape Resizing, What-If Scenario Builder, and Farmer Dashboard.
+2. **Backend API (`backend/`)**: FastAPI REST service with multi-tenant farmer authentication, farm & zone CRUD, SQLite/Firestore persistence, and AI orchestration.
+3. **Biophysical Simulation Engine (`simulation/`)**: Daily agronomic simulation modeling ET0, soil moisture depletion, crop growth stages, NPK nutrient retention, and stress factors.
+4. **AI & Scenario Intelligence (`app/` & `backend/app/services/`)**: XGBoost & Random Forest multi-risk classifiers, Gemini LLM natural language scenario extraction, GDD time-series features, and prescriptive multi-objective optimization.
+
+---
+
 ## Quick Start
 
-### Prerequisites
-
-- Node.js 18+ and npm
-
-### Install
+### 1. Backend Setup (FastAPI & AI Engines)
 
 ```bash
+# Setup Python virtual environment
+python -m venv .venv
+# On Windows:
+.venv\Scripts\activate
+# On Linux/macOS:
+source .venv/bin/activate
+
+# Install dependencies
+pip install -r backend/requirements.txt
+
+# Run the backend API server (runs on http://localhost:8000)
+python backend/run.py
+```
+*Note: If Firebase credentials are not provided in environment variables, the backend automatically and seamlessly initializes with SQLite (`farmsim.db`).*
+
+### 2. Frontend Setup (React & Vite)
+
+```bash
+# Install node dependencies
 npm install
-```
 
-### Configure
-
-Copy the environment file and adjust the API URL:
-
-```bash
+# Configure environment (points to http://localhost:8000 by default)
 cp .env.example .env
-```
 
-Edit `.env`:
-```
-VITE_API_URL=http://localhost:8000
-VITE_APP_NAME=FarmSim AI
-```
-
-### Run (Development)
-
-```bash
+# Run development server (runs on http://localhost:3000)
 npm run dev
 ```
 
-The app starts at **http://localhost:3000**
-
-### Build (Production)
+### 3. Running Automated Tests
 
 ```bash
-npm run build
-npm run preview
+# Run all AI & Simulation unit tests (143 tests)
+pytest tests/ -v
+
+# Run backend API and integration tests (Auth, Farms, Zones, AI endpoints)
+pytest backend/tests/ -v
 ```
 
 ## Project Structure

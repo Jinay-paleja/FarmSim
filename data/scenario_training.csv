@@ -1,0 +1,804 @@
+text,label
+what happens if rainfall decreases,RAIN_REDUCTION
+what if we get less rain this season,RAIN_REDUCTION
+simulate drought conditions on my farm,RAIN_REDUCTION
+reduce rainfall by 30 percent,RAIN_REDUCTION
+what happens if there is very little rain,RAIN_REDUCTION
+simulate a dry season,RAIN_REDUCTION
+what if rainfall drops significantly,RAIN_REDUCTION
+monsoon is late and rainfall is low,RAIN_REDUCTION
+what if we face a 40 percent rain deficit,RAIN_REDUCTION
+if rain is low what will happen to the yield,RAIN_REDUCTION
+dry spell for the next three weeks,RAIN_REDUCTION
+what if precipitation drops by half,RAIN_REDUCTION
+simulate severe rainfall reduction in north field,RAIN_REDUCTION
+rain has stopped completely for two weeks,RAIN_REDUCTION
+what if monsoon rains fail this month,RAIN_REDUCTION
+decrease seasonal rainfall by 25 percent,RAIN_REDUCTION
+simulate drought shock during vegetative stage,RAIN_REDUCTION
+what if we receive below average rainfall,RAIN_REDUCTION
+dry weather continues with no showers,RAIN_REDUCTION
+simulate 50 percent reduction in annual rain,RAIN_REDUCTION
+what happens if monsoon rainfall is poor,RAIN_REDUCTION
+prolonged dry period during critical growth,RAIN_REDUCTION
+what if rain is cut by 35 percent,RAIN_REDUCTION
+no rain forecasted for next twenty days,RAIN_REDUCTION
+simulate deficit rainfall conditions,RAIN_REDUCTION
+if rainfall drops by 20 mm what is the impact,RAIN_REDUCTION
+what if monsoon is deficient this year,RAIN_REDUCTION
+simulate low precipitation scenario,RAIN_REDUCTION
+what if there is acute shortage of rain,RAIN_REDUCTION
+what happens if showers decrease by forty percent,RAIN_REDUCTION
+severe dry spell across all fields,RAIN_REDUCTION
+if rain fails during flowering what happens,RAIN_REDUCTION
+simulate thirty percent less precipitation,RAIN_REDUCTION
+extended dry spell in our region,RAIN_REDUCTION
+what if precipitation is cut in half,RAIN_REDUCTION
+rainfall deficit of 40 percent for one month,RAIN_REDUCTION
+simulate drought stress across farm zones,RAIN_REDUCTION
+scanty rainfall during grain filling stage,RAIN_REDUCTION
+what happens if rainy season is cut short,RAIN_REDUCTION
+rainfall reduction by 60 percent,RAIN_REDUCTION
+predict impact of lower rainfall this month,RAIN_REDUCTION
+if we get very scanty rain this Kharif season,RAIN_REDUCTION
+what if rainfall drops by 15 percent,RAIN_REDUCTION
+simulate prolonged lack of rain,RAIN_REDUCTION
+dry conditions persisting for a month,RAIN_REDUCTION
+what if monsoon precipitation is 30 percent lower,RAIN_REDUCTION
+rainfall drops sharply during vegetative phase,RAIN_REDUCTION
+sub-par rainfall throughout the quarter,RAIN_REDUCTION
+what if precipitation drops to near zero for 10 days,RAIN_REDUCTION
+simulate mild drought on corn crops,RAIN_REDUCTION
+less rain than normal this monsoon,RAIN_REDUCTION
+if rain stops for 15 days how will crop react,RAIN_REDUCTION
+simulate dry spell shock,RAIN_REDUCTION
+rainfall down by 45 percent,RAIN_REDUCTION
+what happens if seasonal rains fail completely,RAIN_REDUCTION
+simulate 20 percent less rain in south plot,RAIN_REDUCTION
+if rainfall is 50 percent below normal,RAIN_REDUCTION
+show me effect of rainfall reduction,RAIN_REDUCTION
+what if rain levels decrease by 30 percent,RAIN_REDUCTION
+rainfall deficit of 25 percent,RAIN_REDUCTION
+simulate below normal rainfall for sixty days,RAIN_REDUCTION
+what if rainfall drops by 20 percent,RAIN_REDUCTION
+simulate deficient rain during flowering,RAIN_REDUCTION
+decrease precipitation by forty percent,RAIN_REDUCTION
+what happens when rainfall decreases,RAIN_REDUCTION
+what if rainfall decreases by 30 percent,RAIN_REDUCTION
+what if rainfall decreases by 20 percent,RAIN_REDUCTION
+what if rainfall decreases by 40 percent,RAIN_REDUCTION
+rainfall decreases by 30 percent,RAIN_REDUCTION
+rainfall decreases by 25 percent,RAIN_REDUCTION
+what if rainfall increases by 50 percent,RAIN_INCREASE
+simulate heavy rainfall over the next week,RAIN_INCREASE
+what happens if we get excessive rain,RAIN_INCREASE
+simulate flood conditions on the farm,RAIN_INCREASE
+heavy downpour for four days continuously,RAIN_INCREASE
+what if rainfall increases by 30 percent,RAIN_INCREASE
+torrential monsoon rains in our area,RAIN_INCREASE
+simulate extreme precipitation event,RAIN_INCREASE
+what happens if it rains double the normal amount,RAIN_INCREASE
+simulate waterlogging caused by heavy rainfall,RAIN_INCREASE
+what if we get 100 mm of excess rain,RAIN_INCREASE
+continuous heavy rain for five days,RAIN_INCREASE
+what if monsoon rains are 40 percent above normal,RAIN_INCREASE
+simulate sudden cloudburst and heavy downpour,RAIN_INCREASE
+excessive rainfall leading to field flooding,RAIN_INCREASE
+what if precipitation surges by 60 percent,RAIN_INCREASE
+simulate high rainfall shock across the farm,RAIN_INCREASE
+what if there is continuous torrential rain,RAIN_INCREASE
+rainfall increased by 25 percent this month,RAIN_INCREASE
+simulate standing water from heavy rain,RAIN_INCREASE
+what happens if rainfall is surplus this season,RAIN_INCREASE
+unseasonal heavy rains during harvest period,RAIN_INCREASE
+what if we receive twice the expected rainfall,RAIN_INCREASE
+heavy monsoon deluge for a week,RAIN_INCREASE
+simulate 70 percent higher precipitation,RAIN_INCREASE
+what if incessant rains hit the crops,RAIN_INCREASE
+flood risk due to surplus rainfall,RAIN_INCREASE
+simulate 150 mm heavy rainfall week,RAIN_INCREASE
+what if rainfall increases significantly in zone 1,RAIN_INCREASE
+heavy rainstorm over the weekend,RAIN_INCREASE
+what happens if rainfall exceeds normal by 50 mm,RAIN_INCREASE
+simulate intense rainfall shock,RAIN_INCREASE
+surplus monsoon downpours for ten days,RAIN_INCREASE
+what if precipitation increases by 35 percent,RAIN_INCREASE
+simulate excessive monsoon precipitation,RAIN_INCREASE
+flooding from prolonged heavy rain,RAIN_INCREASE
+what if rainfall rises by 80 percent,RAIN_INCREASE
+simulate heavy showers every day for two weeks,RAIN_INCREASE
+intense storms dumping excessive water,RAIN_INCREASE
+what if we get record breaking rainfall,RAIN_INCREASE
+simulate torrential downpour impact on soil,RAIN_INCREASE
+what happens if rainfall goes up by 40 percent,RAIN_INCREASE
+excess rain forecast for next seven days,RAIN_INCREASE
+simulate unseasonal rain surge with heavy showers,RAIN_INCREASE
+what if daily rainfall triples for five days,RAIN_INCREASE
+heavy rainfall causing drainage overflow,RAIN_INCREASE
+simulate persistent wet conditions from heavy rain,RAIN_INCREASE
+if rain is much higher than normal what happens,RAIN_INCREASE
+what if rainfall increases by 20 percent in north zone,RAIN_INCREASE
+massive downpour simulation with excess rain,RAIN_INCREASE
+surplus rainfall scenario with 50 percent more rain,RAIN_INCREASE
+what if extreme rain falls on the field,RAIN_INCREASE
+simulate 50 mm extra rain each week,RAIN_INCREASE
+unprecedented heavy rains hitting our fields,RAIN_INCREASE
+what if rainfall increases by 65 percent,RAIN_INCREASE
+higher rainfall by thirty percent this month,RAIN_INCREASE
+simulate heavy precipitation and flood shock,RAIN_INCREASE
+what happens if rain increases by 45 percent,RAIN_INCREASE
+simulate above average rainfall this Kharif,RAIN_INCREASE
+abundant rainfall surge across the district,RAIN_INCREASE
+what if rainfall increases by 25 percent,RAIN_INCREASE
+what happens if temperature increases by 3 degrees,TEMPERATURE_INCREASE
+what if temperatures rise gradually,TEMPERATURE_INCREASE
+simulate a 2 degree warming over the next month,TEMPERATURE_INCREASE
+what if daytime temperature goes up by 4 celsius,TEMPERATURE_INCREASE
+temperature increase of 5 degrees celsius,TEMPERATURE_INCREASE
+what happens if the weather gets warmer,TEMPERATURE_INCREASE
+simulate gradual warming of 3 degrees,TEMPERATURE_INCREASE
+what if temperature rises by 2.5 degrees,TEMPERATURE_INCREASE
+higher ambient temperatures during flowering,TEMPERATURE_INCREASE
+what if daily temperature increases by 3 degrees C,TEMPERATURE_INCREASE
+simulate warmer climate conditions,TEMPERATURE_INCREASE
+what happens if average temperature rises by 4 degrees,TEMPERATURE_INCREASE
+temperatures are higher than normal this week,TEMPERATURE_INCREASE
+simulate 3 degree temperature increase in zone 2,TEMPERATURE_INCREASE
+what if temperature climbs by 5 degrees,TEMPERATURE_INCREASE
+unseasonal warm temperatures across the fields,TEMPERATURE_INCREASE
+what happens if temperatures rise by 2 degrees,TEMPERATURE_INCREASE
+simulate higher daily mean temperatures,TEMPERATURE_INCREASE
+what if temperature increases by 4 degrees for 14 days,TEMPERATURE_INCREASE
+warmer weather expected throughout this month,TEMPERATURE_INCREASE
+simulate moderate temperature rise,TEMPERATURE_INCREASE
+what if daytime temperature reaches 36 degrees from 32,TEMPERATURE_INCREASE
+temperature delta of positive 3 degrees,TEMPERATURE_INCREASE
+what if weather gets 4 degrees hotter than usual,TEMPERATURE_INCREASE
+simulate higher canopy temperature,TEMPERATURE_INCREASE
+what if the temperature goes up by 3.5 degrees,TEMPERATURE_INCREASE
+gradual temperature increase over the crop cycle,TEMPERATURE_INCREASE
+what if average temperature increases by 2 degrees,TEMPERATURE_INCREASE
+warmer nights and days for the next ten days,TEMPERATURE_INCREASE
+simulate warm anomaly of 3 degrees celsius,TEMPERATURE_INCREASE
+what happens if temperature goes up by 5 degrees,TEMPERATURE_INCREASE
+weather is getting steadily warmer by 3 degrees,TEMPERATURE_INCREASE
+simulate temperature rise during grain formation,TEMPERATURE_INCREASE
+what if temperature increases by 1.5 degrees,TEMPERATURE_INCREASE
+rise in average daytime temperature,TEMPERATURE_INCREASE
+what happens if temperature increases by 4 C,TEMPERATURE_INCREASE
+simulate a 3.5 degree temperature rise,TEMPERATURE_INCREASE
+what if local temperature rises by 3 degrees,TEMPERATURE_INCREASE
+warmer growing conditions simulation,TEMPERATURE_INCREASE
+what if mean temperature goes up by 2 degrees,TEMPERATURE_INCREASE
+elevated temperature for two weeks,TEMPERATURE_INCREASE
+simulate 4 degree rise in ambient temperature,TEMPERATURE_INCREASE
+what if temperature increases by 3 degrees Celsius,TEMPERATURE_INCREASE
+warmer thermal regime during vegetative phase,TEMPERATURE_INCREASE
+what if daily maximum temperature climbs by 4 degrees,TEMPERATURE_INCREASE
+simulate temperature increase of 2.5 C in plot 1,TEMPERATURE_INCREASE
+persistent warm temperature anomaly,TEMPERATURE_INCREASE
+what if temperature rises 3 degrees above baseline,TEMPERATURE_INCREASE
+simulate temperature elevation for 10 days,TEMPERATURE_INCREASE
+what if temperature goes up by 4 degrees across all zones,TEMPERATURE_INCREASE
+ambient temperature rise of 3 degrees,TEMPERATURE_INCREASE
+simulate warmer conditions on soybean crop,TEMPERATURE_INCREASE
+what if temperature rises by 3 degrees during maturity,TEMPERATURE_INCREASE
+moderate temperature increase simulation,TEMPERATURE_INCREASE
+what if temperature increases by 4.5 degrees,TEMPERATURE_INCREASE
+simulate 2 degree Celsius temperature increase,TEMPERATURE_INCREASE
+what if ambient temperature climbs by 3 degrees,TEMPERATURE_INCREASE
+simulate rising temperatures across the farm,TEMPERATURE_INCREASE
+temperature increase of 3.5 C over two weeks,TEMPERATURE_INCREASE
+what happens if ambient temperature increases,TEMPERATURE_INCREASE
+what happens if the temperature rises,TEMPERATURE_INCREASE
+what if the temperature rises,TEMPERATURE_INCREASE
+temperature rises by 3 degrees,TEMPERATURE_INCREASE
+simulate a heatwave for 7 days,HEATWAVE
+what if a severe heatwave hits the farm,HEATWAVE
+scorching heatwave with temperatures above 45 degrees,HEATWAVE
+simulate heatwave conditions during pollination,HEATWAVE
+what happens if extreme heatwave strikes next week,HEATWAVE
+blistering heat wave for five days,HEATWAVE
+simulate 42 degree extreme heatwave,HEATWAVE
+what if an intense heat dome and heatwave settles over the area,HEATWAVE
+extreme heatwave shock for 10 days,HEATWAVE
+simulate severe heatwave in north zone,HEATWAVE
+what if heatwave causes thermal shock to crops,HEATWAVE
+temperatures soaring past 44 degrees in heatwave,HEATWAVE
+simulate devastating summer heatwave,HEATWAVE
+what if an unexpected heatwave hits during tasseling,HEATWAVE
+heatwave scenario with 46 degrees peak heat,HEATWAVE
+simulate extreme heat wave for 6 days,HEATWAVE
+what happens if heatwave burns the foliage,HEATWAVE
+severe heatwave event lasting a week,HEATWAVE
+simulate heatwave with hot dry winds,HEATWAVE
+what if a brutal heatwave strikes the farm,HEATWAVE
+prolonged heatwave of 8 days,HEATWAVE
+simulate catastrophic heatwave during flowering,HEATWAVE
+scorching heat wave across the entire district,HEATWAVE
+what if temperatures hit 45 degrees in a heatwave,HEATWAVE
+simulate sudden heatwave onset,HEATWAVE
+heatwave conditions forecast for next 5 days,HEATWAVE
+what happens if heatwave lasts for ten days,HEATWAVE
+extreme heatwave warning simulation,HEATWAVE
+what if heat wave temperatures reach 43 C,HEATWAVE
+simulate critical heatwave stress on corn,HEATWAVE
+dangerous heatwave hitting the region,HEATWAVE
+what if heatwave damages the pollination process,HEATWAVE
+simulate blistering heatwave for 12 days,HEATWAVE
+severe heatwave scenario with 40 plus degrees,HEATWAVE
+what if heatwave strikes during grain filling,HEATWAVE
+simulate acute heatwave shock,HEATWAVE
+unprecedented heatwave hits our crops,HEATWAVE
+what happens if heatwave scorches zone 3,HEATWAVE
+heat wave simulation for two weeks,HEATWAVE
+what if extreme heatwave dries out the canopy,HEATWAVE
+simulate summer heatwave with extreme temperatures,HEATWAVE
+intense heatwave duration of 7 days,HEATWAVE
+what if heatwave leads to pollen sterility,HEATWAVE
+simulate acute heat stress from heatwave,HEATWAVE
+deadly heatwave hits farm for 5 days,HEATWAVE
+what if heatwave peaks at 47 degrees,HEATWAVE
+simulate multi-day severe heatwave,HEATWAVE
+heatwave impact on flowering crops,HEATWAVE
+what if heatwave causes immediate wilt,HEATWAVE
+simulate 7-day blistering heat wave,HEATWAVE
+extreme heatwave with hot loo winds,HEATWAVE
+what if a 9 day heatwave hits the farm,HEATWAVE
+simulate heatwave conditions in all plots,HEATWAVE
+record breaking heatwave hits the area,HEATWAVE
+what if heatwave spikes temperatures to 44 C,HEATWAVE
+simulate blistering heatwave event,HEATWAVE
+what if an acute heatwave strikes,HEATWAVE
+simulate 10 day heat wave in vegetative stage,HEATWAVE
+extreme heatwave conditions across the district,HEATWAVE
+what happens if severe heatwave lasts a week,HEATWAVE
+increase irrigation by 20 percent,IRRIGATION_INCREASE
+give the field more water,IRRIGATION_INCREASE
+what happens if I irrigate more,IRRIGATION_INCREASE
+increase watering by 30 percent,IRRIGATION_INCREASE
+simulate additional irrigation for two weeks,IRRIGATION_INCREASE
+give more water to my crop in zone 1,IRRIGATION_INCREASE
+what if we increase daily watering volume,IRRIGATION_INCREASE
+simulate doubling the irrigation frequency,IRRIGATION_INCREASE
+irrigate crops with 25 percent extra water,IRRIGATION_INCREASE
+what happens if I increase drip irrigation rate,IRRIGATION_INCREASE
+provide additional water through sprinkler,IRRIGATION_INCREASE
+simulate 40 percent more irrigation,IRRIGATION_INCREASE
+what if we supply extra water during silking,IRRIGATION_INCREASE
+increase irrigation cycle to twice a day,IRRIGATION_INCREASE
+give 50 percent more water to all zones,IRRIGATION_INCREASE
+simulate supplementary irrigation run with extra water,IRRIGATION_INCREASE
+what if I turn up the irrigation by 20 percent,IRRIGATION_INCREASE
+boost irrigation application for 10 days,IRRIGATION_INCREASE
+simulate increasing water supply to the plots,IRRIGATION_INCREASE
+what happens if we apply more irrigation water,IRRIGATION_INCREASE
+increase drip watering by 15 percent,IRRIGATION_INCREASE
+simulate 30 percent higher irrigation rate,IRRIGATION_INCREASE
+what if I water the crops more frequently,IRRIGATION_INCREASE
+increase irrigation quota by 25 percent,IRRIGATION_INCREASE
+give crops additional water during heat,IRRIGATION_INCREASE
+simulate higher irrigation volume in south field,IRRIGATION_INCREASE
+what if we increase irrigation by 50 percent,IRRIGATION_INCREASE
+more water application through canal irrigation,IRRIGATION_INCREASE
+simulate extra watering schedule for crops,IRRIGATION_INCREASE
+what happens if irrigation is boosted by 35 percent,IRRIGATION_INCREASE
+apply 20 percent extra irrigation depth,IRRIGATION_INCREASE
+simulate heavy extra irrigation for 7 days,IRRIGATION_INCREASE
+what if I increase watering schedule by 40 percent,IRRIGATION_INCREASE
+irrigate more to counter dry weather,IRRIGATION_INCREASE
+simulate 15 percent increase in water application,IRRIGATION_INCREASE
+give more water to the apple orchard,IRRIGATION_INCREASE
+what if irrigation multiplier is set to 1.3,IRRIGATION_INCREASE
+simulate increased sprinkler watering rate,IRRIGATION_INCREASE
+what happens if I supply 30 percent more water,IRRIGATION_INCREASE
+raise irrigation volume by twenty percent extra,IRRIGATION_INCREASE
+simulate intensive irrigation watering cycle,IRRIGATION_INCREASE
+what if we irrigate zone 2 with extra water,IRRIGATION_INCREASE
+increase irrigation discharge by 25 percent,IRRIGATION_INCREASE
+provide plenty of water through drip system,IRRIGATION_INCREASE
+simulate 45 percent more watering for the plants,IRRIGATION_INCREASE
+what if I increase the irrigation hours to give more water,IRRIGATION_INCREASE
+give additional water to relieve crop stress,IRRIGATION_INCREASE
+simulate boosting irrigation volume by 50 percent,IRRIGATION_INCREASE
+what if we increase watering rate across the farm,IRRIGATION_INCREASE
+increase irrigation dosage by 30 percent,IRRIGATION_INCREASE
+run irrigation pumps for longer hours to apply more water,IRRIGATION_INCREASE
+simulate higher water delivery through pipes,IRRIGATION_INCREASE
+what if I give 20 percent extra water to the crop,IRRIGATION_INCREASE
+expand irrigation volume by 40 percent,IRRIGATION_INCREASE
+simulate elevated irrigation application rate,IRRIGATION_INCREASE
+what if we increase watering by 35 percent,IRRIGATION_INCREASE
+give extra irrigation water to zone 3,IRRIGATION_INCREASE
+simulate higher drip watering depth,IRRIGATION_INCREASE
+what happens if irrigation is increased by 25 percent,IRRIGATION_INCREASE
+apply extra irrigation to the crop,IRRIGATION_INCREASE
+increase irrigation in zone 2 by 20 percent for 15 days,IRRIGATION_INCREASE
+increase irrigation in zone 1 by 30 percent for 10 days,IRRIGATION_INCREASE
+increase irrigation in zone 2 by 20 percent,IRRIGATION_INCREASE
+reduce irrigation by 30 percent,IRRIGATION_DECREASE
+what if I cut down watering by half,IRRIGATION_DECREASE
+simulate reduced irrigation schedule,IRRIGATION_DECREASE
+decrease irrigation supply by 25 percent,IRRIGATION_DECREASE
+what happens if we irrigate less frequently,IRRIGATION_DECREASE
+cut irrigation volume by 40 percent,IRRIGATION_DECREASE
+water rationing reducing irrigation by 20 percent,IRRIGATION_DECREASE
+what if we reduce water application in zone 1,IRRIGATION_DECREASE
+simulate 50 percent cut in irrigation water,IRRIGATION_DECREASE
+reduce watering by 35 percent,IRRIGATION_DECREASE
+what happens if I give less water to the crops,IRRIGATION_DECREASE
+simulate deficit irrigation of 30 percent less water,IRRIGATION_DECREASE
+decrease drip irrigation by 20 percent,IRRIGATION_DECREASE
+what if water quota is reduced by 40 percent,IRRIGATION_DECREASE
+simulate water reduction in irrigation for ten days,IRRIGATION_DECREASE
+lower irrigation rate by 25 percent,IRRIGATION_DECREASE
+what if we cut back irrigation due to water shortage,IRRIGATION_DECREASE
+simulate restricted watering with less irrigation,IRRIGATION_DECREASE
+reduce irrigation depth by 30 percent,IRRIGATION_DECREASE
+what happens if irrigation is reduced by half,IRRIGATION_DECREASE
+decrease sprinkler run time by 50 percent,IRRIGATION_DECREASE
+simulate twenty percent cut in farm irrigation,IRRIGATION_DECREASE
+what if we give less water during vegetative stage,IRRIGATION_DECREASE
+reduce irrigation supply by 45 percent,IRRIGATION_DECREASE
+simulate constrained water delivery with lower irrigation,IRRIGATION_DECREASE
+what if irrigation is decreased by 15 percent,IRRIGATION_DECREASE
+curtail watering by 30 percent in north zone,IRRIGATION_DECREASE
+simulate water conservation with 40 percent cut in irrigation,IRRIGATION_DECREASE
+what happens if we reduce watering volume,IRRIGATION_DECREASE
+decrease irrigation quota by 35 percent,IRRIGATION_DECREASE
+simulate minor irrigation reduction of 10 percent,IRRIGATION_DECREASE
+what if I reduce irrigation due to canal supply cuts,IRRIGATION_DECREASE
+cut water application by 25 percent in irrigation,IRRIGATION_DECREASE
+simulate controlled deficit irrigation with reduced water,IRRIGATION_DECREASE
+reduce drip watering time by 40 percent,IRRIGATION_DECREASE
+what if we lower irrigation by 30 percent,IRRIGATION_DECREASE
+simulate 50 percent reduction in watering rate,IRRIGATION_DECREASE
+give less water to save reservoir reserves,IRRIGATION_DECREASE
+what happens if irrigation is slashed by 30 percent,IRRIGATION_DECREASE
+decrease water supply to field by 20 percent,IRRIGATION_DECREASE
+simulate water cutback reducing irrigation for two weeks,IRRIGATION_DECREASE
+what if we reduce irrigation intensity by twenty percent,IRRIGATION_DECREASE
+lower irrigation delivery by 35 percent,IRRIGATION_DECREASE
+simulate cutting irrigation by 40 percent in plot 3,IRRIGATION_DECREASE
+what if irrigation volume drops by 30 percent,IRRIGATION_DECREASE
+reduce daily watering by twenty percent,IRRIGATION_DECREASE
+simulate water rationing of 25 percent less irrigation,IRRIGATION_DECREASE
+what happens if we decrease irrigation frequency,IRRIGATION_DECREASE
+cut back watering across all zones,IRRIGATION_DECREASE
+simulate 30 percent reduced irrigation depth,IRRIGATION_DECREASE
+what if irrigation is limited to half normal rate,IRRIGATION_DECREASE
+decrease watering duration by 45 percent,IRRIGATION_DECREASE
+simulate lower water supply through irrigation,IRRIGATION_DECREASE
+what if we decrease irrigation by 25 percent,IRRIGATION_DECREASE
+reduce irrigation multiplier to 0.7,IRRIGATION_DECREASE
+curtail irrigation by 30 percent,IRRIGATION_DECREASE
+what if watering is decreased by 35 percent,IRRIGATION_DECREASE
+simulate cut in irrigation supply,IRRIGATION_DECREASE
+decrease daily irrigation volume by 20 percent,IRRIGATION_DECREASE
+what happens if we reduce irrigation water,IRRIGATION_DECREASE
+what if the irrigation pump breaks down,IRRIGATION_FAILURE
+simulate complete irrigation failure for 5 days,IRRIGATION_FAILURE
+tube well motor burned out no water supply,IRRIGATION_FAILURE
+what happens if drip irrigation system fails completely,IRRIGATION_FAILURE
+simulate power outage stopping irrigation pumps,IRRIGATION_FAILURE
+canal water blocked no irrigation reaching fields,IRRIGATION_FAILURE
+what if main irrigation pipe bursts,IRRIGATION_FAILURE
+complete pump failure for one week,IRRIGATION_FAILURE
+simulate zero irrigation for ten days due to failure,IRRIGATION_FAILURE
+what happens if the water pump stops working,IRRIGATION_FAILURE
+irrigation system broke down in zone 2,IRRIGATION_FAILURE
+what if well runs dry and irrigation stops completely,IRRIGATION_FAILURE
+simulate drip emitter clogging and pump failure,IRRIGATION_FAILURE
+no water coming from irrigation borewell due to breakdown,IRRIGATION_FAILURE
+what if power cut shuts down irrigation for 4 days,IRRIGATION_FAILURE
+simulate mechanical failure of irrigation pump,IRRIGATION_FAILURE
+irrigation failure during flowering stage,IRRIGATION_FAILURE
+what happens if irrigation pipe cracks and leaks shutting off water,IRRIGATION_FAILURE
+simulate total failure of watering system,IRRIGATION_FAILURE
+what if irrigation fails for 7 days,IRRIGATION_FAILURE
+drip line damaged no water reaches the crops,IRRIGATION_FAILURE
+simulate pump breakdown during summer,IRRIGATION_FAILURE
+what if motor burns out and irrigation ceases,IRRIGATION_FAILURE
+complete shutdown of irrigation system for 6 days,IRRIGATION_FAILURE
+simulate zero water delivery due to pump fault,IRRIGATION_FAILURE
+what if water pump fails completely in north field,IRRIGATION_FAILURE
+irrigation shut off due to canal maintenance and failure,IRRIGATION_FAILURE
+simulate broken water pump for 8 days,IRRIGATION_FAILURE
+what happens if sprinkler system breaks down,IRRIGATION_FAILURE
+irrigation failure lasting two weeks,IRRIGATION_FAILURE
+what if pump fails and irrigation stops for 5 days,IRRIGATION_FAILURE
+simulate no irrigation due to electrical grid failure,IRRIGATION_FAILURE
+tube well collapsed no irrigation available,IRRIGATION_FAILURE
+what if irrigation system breaks down during grain fill,IRRIGATION_FAILURE
+simulate complete cutoff of irrigation water from failure,IRRIGATION_FAILURE
+pump damaged by lightning no watering possible,IRRIGATION_FAILURE
+what happens if irrigation supply cuts off entirely,IRRIGATION_FAILURE
+simulate zero irrigation for 7 days in zone 1,IRRIGATION_FAILURE
+what if drip lines are cut and irrigation fails,IRRIGATION_FAILURE
+irrigation motor failure for three days,IRRIGATION_FAILURE
+simulate sudden pump breakdown in hot season,IRRIGATION_FAILURE
+what if borewell pump fails during critical phase,IRRIGATION_FAILURE
+complete loss of irrigation for 10 days due to pump breakdown,IRRIGATION_FAILURE
+simulate total irrigation shutdown across farm,IRRIGATION_FAILURE
+what happens if diesel pump runs out of parts and fails,IRRIGATION_FAILURE
+irrigation failure scenario with zero water flow,IRRIGATION_FAILURE
+what if irrigation valves fail and water stops,IRRIGATION_FAILURE
+simulate five days without irrigation due to breakdown,IRRIGATION_FAILURE
+irrigation stopped because canal broke down,IRRIGATION_FAILURE
+what if the water supply system fails completely,IRRIGATION_FAILURE
+simulate broken irrigation pump on corn field,IRRIGATION_FAILURE
+what if no water can be pumped for one week,IRRIGATION_FAILURE
+irrigation system failure during reproductive stage,IRRIGATION_FAILURE
+simulate pump motor burnout and water cutoff,IRRIGATION_FAILURE
+what happens if the irrigation line fails,IRRIGATION_FAILURE
+pump breakdown stops all irrigation,IRRIGATION_FAILURE
+what if irrigation pipe ruptures and shuts off,IRRIGATION_FAILURE
+simulate irrigation equipment breakdown,IRRIGATION_FAILURE
+total pump failure in central borehole,IRRIGATION_FAILURE
+what if irrigation system stops functioning,IRRIGATION_FAILURE
+what if I reduce fertilizer application by 30 percent,FERTILIZER_CHANGE
+change fertilizer dose by 20 percent,FERTILIZER_CHANGE
+simulate altering NPK fertilizer rate,FERTILIZER_CHANGE
+what happens if I apply 25 percent more fertilizer,FERTILIZER_CHANGE
+reduce urea application by half,FERTILIZER_CHANGE
+simulate 40 percent cut in fertilizer dosage,FERTILIZER_CHANGE
+what if I increase fertilizer by 15 percent,FERTILIZER_CHANGE
+change nitrogen application timing and amount,FERTILIZER_CHANGE
+simulate 20 percent reduction in chemical fertilizer,FERTILIZER_CHANGE
+what happens if I change DAP and urea doses,FERTILIZER_CHANGE
+increase fertilizer application by 30 percent,FERTILIZER_CHANGE
+simulate split fertilizer application change,FERTILIZER_CHANGE
+what if we cut fertilizer by 50 percent due to price,FERTILIZER_CHANGE
+adjust fertilizer application rate in zone 1,FERTILIZER_CHANGE
+simulate 25 percent less fertilizer input,FERTILIZER_CHANGE
+what happens if I reduce top dress fertilizer,FERTILIZER_CHANGE
+change fertilizer multiplier to 0.8,FERTILIZER_CHANGE
+simulate doubling fertilizer application,FERTILIZER_CHANGE
+what if we reduce chemical fertilizer by 35 percent,FERTILIZER_CHANGE
+modify fertilizer dosage for the wheat crop,FERTILIZER_CHANGE
+simulate 20 percent increase in fertilizer,FERTILIZER_CHANGE
+what if fertilizer rate is changed across all zones,FERTILIZER_CHANGE
+reduce fertilizer usage by 40 percent,FERTILIZER_CHANGE
+simulate changing NPK blend application,FERTILIZER_CHANGE
+what happens if I apply 50 percent more fertilizer,FERTILIZER_CHANGE
+cut back on urea and potash application,FERTILIZER_CHANGE
+simulate 30 percent increase in basal fertilizer,FERTILIZER_CHANGE
+what if I alter the fertilizer rate during vegetative stage,FERTILIZER_CHANGE
+decrease fertilizer application by 25 percent,FERTILIZER_CHANGE
+simulate thirty percent reduction in fertilizer dose,FERTILIZER_CHANGE
+what happens if fertilizer application is halved,FERTILIZER_CHANGE
+increase fertilizer dose by 20 percent in plot 2,FERTILIZER_CHANGE
+simulate changing fertilizer schedule,FERTILIZER_CHANGE
+what if we reduce fertilizer by twenty percent,FERTILIZER_CHANGE
+adjust fertilizer inputs by 30 percent,FERTILIZER_CHANGE
+simulate higher fertilizer dosage on corn,FERTILIZER_CHANGE
+what if I reduce NPK fertilizer application,FERTILIZER_CHANGE
+change fertilizer rate for this season,FERTILIZER_CHANGE
+simulate 40 percent lower fertilizer input,FERTILIZER_CHANGE
+what happens if I boost fertilizer by 25 percent,FERTILIZER_CHANGE
+alter urea dose by 30 percent,FERTILIZER_CHANGE
+simulate reduced fertilizer application,FERTILIZER_CHANGE
+what if I cut fertilizer application in half,FERTILIZER_CHANGE
+change basal fertilizer dose by 15 percent,FERTILIZER_CHANGE
+simulate 50 percent increase in fertilizer dosage,FERTILIZER_CHANGE
+what happens if fertilizer dose is reduced by 30 percent,FERTILIZER_CHANGE
+adjust fertilizer application levels,FERTILIZER_CHANGE
+simulate applying 20 percent less NPK,FERTILIZER_CHANGE
+what if we change fertilizer application rates,FERTILIZER_CHANGE
+reduce nitrogen fertilizer by 40 percent,FERTILIZER_CHANGE
+simulate modifying fertilizer inputs in south zone,FERTILIZER_CHANGE
+what happens if fertilizer is increased by 35 percent,FERTILIZER_CHANGE
+cut fertilizer dose due to budget constraint,FERTILIZER_CHANGE
+simulate changing chemical fertilizer quantity,FERTILIZER_CHANGE
+what if I alter fertilizer dosage by 25 percent,FERTILIZER_CHANGE
+reduce fertilizer,FERTILIZER_CHANGE
+what if I change fertilizer dosage by 30 percent,FERTILIZER_CHANGE
+simulate 20 percent increase in urea fertilizer,FERTILIZER_CHANGE
+cut chemical fertilizer application by 25 percent,FERTILIZER_CHANGE
+what happens if fertilizer inputs are altered,FERTILIZER_CHANGE
+crop leaves turning yellow low nitrogen,NUTRIENT_DEFICIENCY
+simulate acute nitrogen deficiency in zone 1,NUTRIENT_DEFICIENCY
+plants are starving for nutrients,NUTRIENT_DEFICIENCY
+what happens if soil has severe phosphorus deficiency,NUTRIENT_DEFICIENCY
+simulate potassium shortage in the field,NUTRIENT_DEFICIENCY
+crop is showing severe nutrient deficiency symptoms,NUTRIENT_DEFICIENCY
+what if soil nitrogen drops below critical level,NUTRIENT_DEFICIENCY
+simulate zinc and micronutrient deficiency,NUTRIENT_DEFICIENCY
+plants show stunted growth due to lack of nutrients,NUTRIENT_DEFICIENCY
+what if crop suffers from severe nutrient deficiency,NUTRIENT_DEFICIENCY
+simulate low phosphorus levels in soil,NUTRIENT_DEFICIENCY
+yellowing of lower leaves due to nitrogen hunger,NUTRIENT_DEFICIENCY
+what happens if soil runs out of potassium,NUTRIENT_DEFICIENCY
+simulate multi nutrient deficiency in wheat,NUTRIENT_DEFICIENCY
+crop suffering from severe nutrient starvation,NUTRIENT_DEFICIENCY
+what if nitrogen levels drop by 60 percent,NUTRIENT_DEFICIENCY
+simulate nutrient deficiency in north plot,NUTRIENT_DEFICIENCY
+plants lack essential minerals in soil,NUTRIENT_DEFICIENCY
+what happens if potassium deficiency hits corn,NUTRIENT_DEFICIENCY
+simulate severe nutrient deficiency during flowering,NUTRIENT_DEFICIENCY
+soil test shows acute nutrient deficiency,NUTRIENT_DEFICIENCY
+what if nitrogen deficiency stunts crop growth,NUTRIENT_DEFICIENCY
+simulate low nutrient availability in sandy soil,NUTRIENT_DEFICIENCY
+crops are nutrient deficient and pale,NUTRIENT_DEFICIENCY
+what happens if phosphorus is deficient in root zone,NUTRIENT_DEFICIENCY
+simulate critical nitrogen shortage,NUTRIENT_DEFICIENCY
+nutrient deficiency causing leaf chlorosis,NUTRIENT_DEFICIENCY
+what if crops lack required soil nutrients,NUTRIENT_DEFICIENCY
+simulate severe potassium deficiency in zone 3,NUTRIENT_DEFICIENCY
+poor soil fertility leading to nutrient deficiency,NUTRIENT_DEFICIENCY
+what happens if crop has severe nitrogen deficiency,NUTRIENT_DEFICIENCY
+simulate acute nutrient depletion in soil,NUTRIENT_DEFICIENCY
+crops showing purple leaves from phosphorus deficiency,NUTRIENT_DEFICIENCY
+what if available nitrogen drops to near zero,NUTRIENT_DEFICIENCY
+simulate micronutrient and NPK deficiency,NUTRIENT_DEFICIENCY
+crop has low nutrients and weak stems,NUTRIENT_DEFICIENCY
+what happens if soil nutrients are severely depleted,NUTRIENT_DEFICIENCY
+simulate nitrogen deficiency across the farm,NUTRIENT_DEFICIENCY
+plants exhibit severe nutrient hunger,NUTRIENT_DEFICIENCY
+what if potassium levels are critically low,NUTRIENT_DEFICIENCY
+simulate phosphorus deficiency during root development,NUTRIENT_DEFICIENCY
+crop is suffering from nutrient deficiency,NUTRIENT_DEFICIENCY
+what happens if soil NPK is deficient,NUTRIENT_DEFICIENCY
+simulate widespread nutrient deficiency in orchard,NUTRIENT_DEFICIENCY
+severe nutrient deficiency symptoms appearing,NUTRIENT_DEFICIENCY
+what if plants cannot absorb enough nitrogen,NUTRIENT_DEFICIENCY
+simulate nutrient depletion shock,NUTRIENT_DEFICIENCY
+leaf yellowing from severe nitrogen deficiency,NUTRIENT_DEFICIENCY
+what happens if soil lacks vital nutrients,NUTRIENT_DEFICIENCY
+simulate nutrient deficiency scenario in plot A,NUTRIENT_DEFICIENCY
+crop has low nutrients what will happen to yield,NUTRIENT_DEFICIENCY
+severe lack of nutrients in the crop,NUTRIENT_DEFICIENCY
+simulate soil nutrient exhaustion,NUTRIENT_DEFICIENCY
+what if phosphorus is severely deficient,NUTRIENT_DEFICIENCY
+nutrient deficiency affecting crop development,NUTRIENT_DEFICIENCY
+crop has low nutrients,NUTRIENT_DEFICIENCY
+plants are showing severe nutrient deficiency,NUTRIENT_DEFICIENCY
+soil lacks essential nutrients for growth,NUTRIENT_DEFICIENCY
+simulate acute phosphorus and potassium deficiency,NUTRIENT_DEFICIENCY
+what happens if crop suffers nitrogen deficiency,NUTRIENT_DEFICIENCY
+what if disease starts in zone 2,DISEASE_OUTBREAK
+simulate a disease outbreak across the farm,DISEASE_OUTBREAK
+what happens if the crop gets infected with fungal blight,DISEASE_OUTBREAK
+introduce disease into the field,DISEASE_OUTBREAK
+leaf spot disease spreading rapidly,DISEASE_OUTBREAK
+what if rust disease attacks wheat crop,DISEASE_OUTBREAK
+simulate severe powdery mildew outbreak,DISEASE_OUTBREAK
+fungal disease outbreak in north zone,DISEASE_OUTBREAK
+what happens if disease spreads to all plots,DISEASE_OUTBREAK
+simulate bacterial blight outbreak,DISEASE_OUTBREAK
+what if my field gets infected with viral disease,DISEASE_OUTBREAK
+disease pressure increasing significantly,DISEASE_OUTBREAK
+simulate 50 percent crop infection from disease,DISEASE_OUTBREAK
+what if sheath blight breaks out in rice field,DISEASE_OUTBREAK
+simulate devastating fungal disease outbreak,DISEASE_OUTBREAK
+what happens if downy mildew attacks the canopy,DISEASE_OUTBREAK
+crop is showing signs of root rot disease,DISEASE_OUTBREAK
+simulate rapid disease spread in zone 1,DISEASE_OUTBREAK
+what if late blight disease strikes tomatoes,DISEASE_OUTBREAK
+disease outbreak causing widespread foliage damage,DISEASE_OUTBREAK
+simulate heavy disease pressure for 14 days,DISEASE_OUTBREAK
+what happens if foliar disease infects the crop,DISEASE_OUTBREAK
+severe rust disease outbreak on the farm,DISEASE_OUTBREAK
+what if my crops catch a fungal infection,DISEASE_OUTBREAK
+simulate sudden disease outbreak in warm wet weather,DISEASE_OUTBREAK
+pathogen disease outbreak infecting thirty percent of plants,DISEASE_OUTBREAK
+what happens if yellow rust disease spreads,DISEASE_OUTBREAK
+simulate catastrophic disease epidemic in crops,DISEASE_OUTBREAK
+what if bacterial wilt disease affects vegetables,DISEASE_OUTBREAK
+disease outbreak spreading from neighboring field,DISEASE_OUTBREAK
+simulate high disease pressure scenario,DISEASE_OUTBREAK
+what if fungal spores trigger a disease outbreak,DISEASE_OUTBREAK
+crop disease outbreak during fruit set,DISEASE_OUTBREAK
+what happens if disease destroys thirty percent of foliage,DISEASE_OUTBREAK
+simulate stem rot disease outbreak,DISEASE_OUTBREAK
+what if a novel plant disease attacks the field,DISEASE_OUTBREAK
+disease outbreak rapidly advancing across zones,DISEASE_OUTBREAK
+simulate fungal pathogen infection on leaves,DISEASE_OUTBREAK
+what happens if crop gets infected by blight,DISEASE_OUTBREAK
+severe disease outbreak forecast for next week,DISEASE_OUTBREAK
+simulate leaf blight disease infection,DISEASE_OUTBREAK
+what if plant disease strikes during vegetative phase,DISEASE_OUTBREAK
+crop disease epidemic across all plots,DISEASE_OUTBREAK
+simulate aggressive disease outbreak,DISEASE_OUTBREAK
+what happens if rust disease infects seventy percent of plants,DISEASE_OUTBREAK
+disease outbreak threatening entire harvest,DISEASE_OUTBREAK
+what if a bacterial disease infects zone 3,DISEASE_OUTBREAK
+simulate severe crop disease infestation,DISEASE_OUTBREAK
+what happens if my field gets a disease,DISEASE_OUTBREAK
+simulate disease outbreak with high pathogen pressure,DISEASE_OUTBREAK
+what if fungal blight spreads through the field,DISEASE_OUTBREAK
+crop infected with virulent disease strain,DISEASE_OUTBREAK
+simulate rapid pathogen spread on farm,DISEASE_OUTBREAK
+what if viral mosaic disease breaks out,DISEASE_OUTBREAK
+disease outbreak spreading through zone 1,DISEASE_OUTBREAK
+what if disease spreads through zone 1,DISEASE_OUTBREAK
+simulate fungal blight disease outbreak,DISEASE_OUTBREAK
+crop infected with bacterial disease,DISEASE_OUTBREAK
+what happens if powdery mildew disease strikes,DISEASE_OUTBREAK
+simulate plant disease spreading in the field,DISEASE_OUTBREAK
+what if pests attack the crop,PEST_OUTBREAK
+simulate a severe pest outbreak in zone 1,PEST_OUTBREAK
+locust swarm invading the farm,PEST_OUTBREAK
+what happens if fall armyworm infests the corn,PEST_OUTBREAK
+simulate aphid pest outbreak across all fields,PEST_OUTBREAK
+insect pest attack destroying the leaves,PEST_OUTBREAK
+what if stem borer pests attack the crop,PEST_OUTBREAK
+simulate thirty percent crop damage from pests,PEST_OUTBREAK
+bollworm pest infestation on cotton plants,PEST_OUTBREAK
+what happens if whitefly pest outbreak occurs,PEST_OUTBREAK
+simulate massive caterpillar attack on foliage,PEST_OUTBREAK
+what if insect pests destroy our crops,PEST_OUTBREAK
+simulate severe pest infestation for two weeks,PEST_OUTBREAK
+what happens if brown plant hopper insect attacks rice,PEST_OUTBREAK
+locust pest attack devastating the crops,PEST_OUTBREAK
+what if pests multiply rapidly in the heat,PEST_OUTBREAK
+simulate destructive pest outbreak in zone 2,PEST_OUTBREAK
+armyworms eating the leaves of young crops,PEST_OUTBREAK
+what if thrips and mites infest the field as pests,PEST_OUTBREAK
+simulate heavy pest pressure scenario,PEST_OUTBREAK
+what happens if beetle pests eat the flowers,PEST_OUTBREAK
+major pest outbreak threatening the farm,PEST_OUTBREAK
+what if stem borers kill fifty percent of tillers,PEST_OUTBREAK
+simulate grasshopper pest invasion,PEST_OUTBREAK
+insects and caterpillars attacking the plants as pests,PEST_OUTBREAK
+what if pest population explodes this month,PEST_OUTBREAK
+simulate severe insect pest damage,PEST_OUTBREAK
+what happens if pod borer pests attack pulses,PEST_OUTBREAK
+pest outbreak spreading from boundary trees,PEST_OUTBREAK
+what if devastating pests invade my farm,PEST_OUTBREAK
+simulate unchecked pest attack on crops,PEST_OUTBREAK
+cutworms destroying seedlings across the field,PEST_OUTBREAK
+what if aphids and insects attack during pest outbreak,PEST_OUTBREAK
+simulate acute pest pressure on wheat,PEST_OUTBREAK
+what happens if insect pests attack during silking,PEST_OUTBREAK
+pest outbreak causing sixty percent defoliation,PEST_OUTBREAK
+what if destructive worm pests attack the field,PEST_OUTBREAK
+simulate locust swarm landing on farm,PEST_OUTBREAK
+whitefly insect infestation spreading across crops,PEST_OUTBREAK
+what happens if bug pests swarm the field,PEST_OUTBREAK
+simulate severe caterpillar pest outbreak,PEST_OUTBREAK
+what if insect pest attack doubles in intensity,PEST_OUTBREAK
+pest attack damaging thirty percent of yield,PEST_OUTBREAK
+simulate armyworm invasion in south field,PEST_OUTBREAK
+what if sucking insect pests attack the orchard,PEST_OUTBREAK
+pest outbreak destroying crop leaves rapidly,PEST_OUTBREAK
+simulate extreme pest pressure across farm,PEST_OUTBREAK
+what happens if insect larvae eat the crop as pests,PEST_OUTBREAK
+heavy pest outbreak reported in our district,PEST_OUTBREAK
+what if stem borer infestation destroys plants,PEST_OUTBREAK
+simulate voracious pest outbreak in zone 4,PEST_OUTBREAK
+insect pest attack causing leaf drop and wilting,PEST_OUTBREAK
+what if swarm of pests attacks the crop,PEST_OUTBREAK
+simulate severe pest infestation scenario,PEST_OUTBREAK
+destructive pest outbreak hitting the crops,PEST_OUTBREAK
+what happens if armyworms infest the crop,PEST_OUTBREAK
+simulate locust pest attack on the fields,PEST_OUTBREAK
+what if insects swarm the farm,PEST_OUTBREAK
+simulate thirty percent yield loss from pest attack,PEST_OUTBREAK
+insect pest outbreak spreading through zone 2,PEST_OUTBREAK
+increase soil moisture by 20 percent,SOIL_MOISTURE_CHANGE
+what if soil moisture drops to 15 percent,SOIL_MOISTURE_CHANGE
+simulate soil moisture change in zone 1,SOIL_MOISTURE_CHANGE
+decrease soil moisture by 25 percent,SOIL_MOISTURE_CHANGE
+what happens if soil moisture drops sharply,SOIL_MOISTURE_CHANGE
+simulate soil drying out rapidly,SOIL_MOISTURE_CHANGE
+what if volumetric soil moisture drops by 10 percent,SOIL_MOISTURE_CHANGE
+raise soil moisture level by 15 percent,SOIL_MOISTURE_CHANGE
+simulate high soil water saturation,SOIL_MOISTURE_CHANGE
+what if soil moisture falls below permanent wilting point,SOIL_MOISTURE_CHANGE
+soil moisture change of minus 15 percent,SOIL_MOISTURE_CHANGE
+what happens if soil becomes completely dry,SOIL_MOISTURE_CHANGE
+simulate soil moisture deficit in root zone,SOIL_MOISTURE_CHANGE
+what if soil moisture increases by 30 percent,SOIL_MOISTURE_CHANGE
+adjust soil moisture level across the farm,SOIL_MOISTURE_CHANGE
+simulate ground moisture reduction of 20 percent,SOIL_MOISTURE_CHANGE
+what if topsoil moisture drops to 12 percent,SOIL_MOISTURE_CHANGE
+simulate soggy soil conditions with high moisture,SOIL_MOISTURE_CHANGE
+what happens if root zone soil moisture declines,SOIL_MOISTURE_CHANGE
+soil moisture drops by 8 percent over five days,SOIL_MOISTURE_CHANGE
+simulate 15 percent drop in soil moisture content,SOIL_MOISTURE_CHANGE
+what if soil moisture is maintained at field capacity,SOIL_MOISTURE_CHANGE
+simulate rapid depletion of soil moisture,SOIL_MOISTURE_CHANGE
+what happens if soil moisture fluctuates wildly,SOIL_MOISTURE_CHANGE
+decrease ground soil moisture by 30 percent,SOIL_MOISTURE_CHANGE
+simulate soil moisture increase after deep irrigation,SOIL_MOISTURE_CHANGE
+what if soil moisture drops below 20 percent,SOIL_MOISTURE_CHANGE
+simulate dry soil conditions in sandy loam plot,SOIL_MOISTURE_CHANGE
+what happens if soil moisture falls by 12 percent,SOIL_MOISTURE_CHANGE
+adjust soil water content by minus 10 percent,SOIL_MOISTURE_CHANGE
+simulate soil moisture change during tuber formation,SOIL_MOISTURE_CHANGE
+what if subsoil moisture is severely depleted,SOIL_MOISTURE_CHANGE
+increase soil moisture by 25 percent in zone 2,SOIL_MOISTURE_CHANGE
+simulate soil moisture stress on root system,SOIL_MOISTURE_CHANGE
+what happens if soil moisture drops by half,SOIL_MOISTURE_CHANGE
+soil moisture delta of negative 10 percent,SOIL_MOISTURE_CHANGE
+what if soil moisture levels drop to critical limits,SOIL_MOISTURE_CHANGE
+simulate soil drying for ten days,SOIL_MOISTURE_CHANGE
+what happens if soil moisture content increases by 15 percent,SOIL_MOISTURE_CHANGE
+simulate ground moisture depletion across all plots,SOIL_MOISTURE_CHANGE
+what if soil moisture drops from 30 percent to 18 percent,SOIL_MOISTURE_CHANGE
+reduce root zone soil moisture by 20 percent,SOIL_MOISTURE_CHANGE
+simulate wet soil moisture profile,SOIL_MOISTURE_CHANGE
+what happens if soil moisture declines steadily,SOIL_MOISTURE_CHANGE
+soil moisture change simulation for two weeks,SOIL_MOISTURE_CHANGE
+what if soil moisture drops by 25 percent in clay soil,SOIL_MOISTURE_CHANGE
+simulate drop in soil water percentage,SOIL_MOISTURE_CHANGE
+what happens if ground moisture dries up completely,SOIL_MOISTURE_CHANGE
+simulate maintaining soil moisture at 35 percent,SOIL_MOISTURE_CHANGE
+what if soil moisture content falls by 15 percent,SOIL_MOISTURE_CHANGE
+decrease soil moisture level in north field,SOIL_MOISTURE_CHANGE
+simulate soil moisture depletion curve,SOIL_MOISTURE_CHANGE
+what happens if soil moisture drops sharply in zone 3,SOIL_MOISTURE_CHANGE
+soil moisture change of plus 20 percent,SOIL_MOISTURE_CHANGE
+what if available soil water decreases by 30 percent,SOIL_MOISTURE_CHANGE
+increase soil moisture,SOIL_MOISTURE_CHANGE
+decrease soil moisture by 20 percent in plot 1,SOIL_MOISTURE_CHANGE
+simulate change in soil moisture content,SOIL_MOISTURE_CHANGE
+what if soil moisture increases by 15 percent,SOIL_MOISTURE_CHANGE
+what happens if root zone soil moisture drops,SOIL_MOISTURE_CHANGE
+what if we have a heatwave and rainfall decreases by 40 percent,COMBINED
+simulate drought and high temperature together,COMBINED
+heatwave combined with irrigation pump failure,COMBINED
+what happens if temperature rises by 4 degrees and rain stops,COMBINED
+simulate heavy rainfall combined with disease outbreak,COMBINED
+dry spell accompanied by severe heatwave shock,COMBINED
+what if drought occurs and pests attack simultaneously,COMBINED
+simulate pump failure during extreme heatwave,COMBINED
+what if rainfall drops by 50 percent and temperatures rise 3 degrees,COMBINED
+combined scenario of nitrogen deficiency and drought,COMBINED
+simulate 35 degree heat and zero rainfall for two weeks,COMBINED
+what if excessive rain causes flooding and fungal disease breaks out,COMBINED
+simulate dry weather combined with irrigation cut of 40 percent,COMBINED
+what happens if heatwave strikes while irrigation is reduced,COMBINED
+combined shock of pest outbreak and severe drought,COMBINED
+simulate extreme heat and water shortage together,COMBINED
+what if temperature goes up 5 degrees and rainfall drops by half,COMBINED
+simulate heavy downpour followed by pest infestation,COMBINED
+combined effect of fertilizer reduction and moisture deficit,COMBINED
+what happens if drought and heatwave hit at the same time,COMBINED
+simulate combined stress of pump breakdown and 42 degree heat,COMBINED
+what if rainfall drops 30 percent and disease spreads across zone 1,COMBINED
+heatwave and water rationing occurring together,COMBINED
+simulate compound climate shock with heat and dry spell,COMBINED
+what if temperatures rise 3 degrees and irrigation is cut by 25 percent,COMBINED
+simulate combined drought and nutrient deficiency,COMBINED
+severe heatwave combined with 50 percent rainfall cut,COMBINED
+what happens if pest attack occurs during a severe dry spell,COMBINED
+simulate excessive rain and fertilizer leaching together,COMBINED
+what if drought and pump failure happen simultaneously,COMBINED
+combined scenario of 4 degree warming and zero precipitation,COMBINED
+simulate heatwave combined with pest invasion,COMBINED
+what happens if low rainfall combines with high temperature,COMBINED
+"simulate multi-factor shock of heat, drought, and pests",COMBINED
+what if rainfall increases by 40 percent and disease pressure spikes,COMBINED
+combined stress of water cut and nutrient starvation,COMBINED
+simulate drought together with heatwave for ten days,COMBINED
+what happens if pump breaks down during a 40 degree heatwave,COMBINED
+simulate combined rainfall reduction and temperature increase,COMBINED
+what if hot dry winds hit during an irrigation failure,COMBINED
+combined scenario with 50 percent less rain and 4 degrees hotter,COMBINED
+simulate flooding combined with fungal pathogen spread,COMBINED
+what if heatwave strikes during fertilizer shortage,COMBINED
+"simulate combined drought, heat, and pest outbreak",COMBINED
+what happens if dry spell coincides with irrigation breakdown,COMBINED
+combined impact of 30 percent rain deficit and 3 degree warming,COMBINED
+simulate heatwave and low soil moisture occurring together,COMBINED
+what if excessive rains hit alongside severe disease outbreak,COMBINED
+combined shock of water deficit and high ambient heat,COMBINED
+simulate multi-hazard scenario of drought and heatwave,COMBINED
+what happens if temperatures spike to 43 C while rainfall drops,COMBINED
+simulate combined heatwave and pump failure in north plot,COMBINED
+what if pest outbreak strikes during severe drought,COMBINED
+combined scenario of reduced irrigation and heat stress,COMBINED
+simulate simultaneous drought and disease outbreak,COMBINED
+combined scenario of heatwave and drought,COMBINED
+simulate compound shock of pest attack and heatwave,COMBINED
+what if drought and disease hit simultaneously,COMBINED
+combined stress of heavy rain and pest infestation,COMBINED
+simulate multi-hazard shock on farm,COMBINED
+reduce rainfall by 30 percent and increase temperature by 3 degrees,COMBINED
+reduce rainfall by 25 percent and increase temperature by 2 degrees for 30 days,COMBINED
+"reduce rainfall by 30 percent, increase temperature by 3 degrees and increase irrigation by 15 percent for 45 days",COMBINED
+reduce rainfall by 30 percent and increase temperature by 3 degrees for 30 days,COMBINED
+what if rainfall drops by 30 percent and temperature rises by 3 degrees,COMBINED
+cut rainfall by 25 percent and increase heat by 2 degrees,COMBINED
