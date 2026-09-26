@@ -58,17 +58,14 @@ export default function Layout() {
 
   const farmMapLink = activeFarmId ? `/farms/${activeFarmId}/builder` : (farms.length > 0 ? `/farms/${farms[0].id}/builder` : '/farms/create');
   const simulationsLink = activeFarmId ? `/farms/${activeFarmId}/scenarios/new` : (farms.length > 0 ? `/farms/${farms[0].id}/scenarios/new` : '/farms/create');
-  const analyticsLink = activeFarmId ? `/farms/${activeFarmId}` : '/farms';
-  const compareLink = activeFarmId ? `/farms/${activeFarmId}/compare` : '/farms';
+  const farmDashboardLink = activeFarmId ? `/farms/${activeFarmId}` : (farms.length > 0 ? `/farms/${farms[0].id}` : '/farms/create');
 
-  // Authenticated Navigation Items
+  // Authenticated Navigation Items (Clean & Simple Prototype)
   const authNavItems = [
     { to: '/dashboard', icon: BarChart3, label: 'Dashboard' },
-    { to: '/farms', icon: Tractor, label: 'My Farms' },
-    { to: farmMapLink, icon: Layers, label: 'Farm Map' },
-    { to: simulationsLink, icon: Sprout, label: 'Simulations' },
-    { to: analyticsLink, icon: LineChart, label: 'Analytics' },
-    { to: compareLink, icon: GitCompare, label: 'Compare' },
+    { to: farmDashboardLink, icon: Tractor, label: 'My Farm' },
+    { to: farmMapLink, icon: Layers, label: 'Farm Builder' },
+    { to: simulationsLink, icon: Sprout, label: 'Simulation' },
   ];
 
   // Public Navigation Items
@@ -186,11 +183,9 @@ export default function Layout() {
                   const isItemActive = (() => {
                     const path = location.pathname;
                     if (item.label === 'Dashboard') return path === '/dashboard';
-                    if (item.label === 'My Farms') return path === '/farms' || path === '/farms/create';
-                    if (item.label === 'Farm Map') return path.includes('/builder');
-                    if (item.label === 'Simulations') return path.includes('/scenario') || path.includes('/simulation') || path.includes('/results');
-                    if (item.label === 'Analytics') return path.match(/^\/farms\/[^/]+$/) !== null;
-                    if (item.label === 'Compare') return path.includes('/compare') || path.includes('/comparison');
+                    if (item.label === 'My Farm') return path === '/farms' || path.startsWith('/farms/') && !path.includes('/builder') && !path.includes('/scenario') && !path.includes('/simulation');
+                    if (item.label === 'Farm Builder') return path.includes('/builder');
+                    if (item.label === 'Simulation') return path.includes('/scenario') || path.includes('/simulation') || path.includes('/results');
                     return path === item.to;
                   })();
                   return (
@@ -354,11 +349,9 @@ export default function Layout() {
                 const isItemActive = (() => {
                   const path = location.pathname;
                   if (item.label === 'Dashboard') return path === '/dashboard';
-                  if (item.label === 'My Farms') return path === '/farms' || path === '/farms/create';
-                  if (item.label === 'Farm Map') return path.includes('/builder');
-                  if (item.label === 'Simulations') return path.includes('/scenario') || path.includes('/simulation') || path.includes('/results');
-                  if (item.label === 'Analytics') return path.match(/^\/farms\/[^/]+$/) !== null;
-                  if (item.label === 'Compare') return path.includes('/compare') || path.includes('/comparison');
+                  if (item.label === 'My Farm') return path === '/farms' || path.startsWith('/farms/') && !path.includes('/builder') && !path.includes('/scenario') && !path.includes('/simulation');
+                  if (item.label === 'Farm Builder') return path.includes('/builder');
+                  if (item.label === 'Simulation') return path.includes('/scenario') || path.includes('/simulation') || path.includes('/results');
                   return path === item.to;
                 })();
                 return (

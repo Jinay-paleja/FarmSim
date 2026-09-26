@@ -83,7 +83,7 @@ export interface Zone {
 }
 
 export type CropType =
-  | 'Rice' | 'Wheat' | 'Maize' | 'Sorghum' | 'Pearl Millet'
+  | 'Rice' | 'Wheat' | 'Tomato' | 'Maize' | 'Sorghum' | 'Pearl Millet'
   | 'Chickpea' | 'Pigeon Pea' | 'Green Gram' | 'Soybean'
   | 'Groundnut' | 'Mustard' | 'Cotton' | 'Sugarcane' | 'Potato';
 
@@ -177,6 +177,8 @@ export interface SimulationResult {
   };
   decisionSupportNote?: string;
   aiExplanation: string;
+  farm_area_acres?: number;
+  farmAreaAcres?: number;
   createdAt?: string;
 }
 
@@ -321,7 +323,7 @@ export type LoadingState = 'idle' | 'loading' | 'success' | 'error';
 // ============================================================
 
 export const CROP_OPTIONS: CropType[] = [
-  'Rice', 'Wheat', 'Maize', 'Sorghum', 'Pearl Millet',
+  'Wheat', 'Rice', 'Tomato', 'Maize', 'Sorghum', 'Pearl Millet',
   'Chickpea', 'Pigeon Pea', 'Green Gram', 'Soybean',
   'Groundnut', 'Mustard', 'Cotton', 'Sugarcane', 'Potato',
 ];
@@ -365,6 +367,7 @@ export const SCENARIO_PRESETS: {
 export const CROP_COLORS: Record<CropType, string> = {
   Rice: '#4CAF50',
   Wheat: '#FFB74D',
+  Tomato: '#EF4444',
   Maize: '#FDD835',
   Sorghum: '#A1887F',
   'Pearl Millet': '#E0E0E0',
@@ -382,6 +385,7 @@ export const CROP_COLORS: Record<CropType, string> = {
 export const CROP_EMOJIS: Record<CropType, string> = {
   Rice: '🌾',
   Wheat: '🌾',
+  Tomato: '🍅',
   Maize: '🌽',
   Sorghum: '🌿',
   'Pearl Millet': '🌿',

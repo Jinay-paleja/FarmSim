@@ -17,6 +17,7 @@ import LoadingSpinner from '../components/shared/LoadingSpinner';
 import ErrorDisplay from '../components/shared/ErrorDisplay';
 import MetricCard from '../components/shared/MetricCard';
 import DigitalFarmMap, { MapVisualizationMode } from '../components/map/DigitalFarmMap';
+import VirtualFarmWorkspace from '../components/virtual/VirtualFarmWorkspace';
 import type { SimulationResult, Farm, ZoneInput } from '../types';
 import { CROP_EMOJIS } from '../types';
 import { useFarmWeather } from '../hooks/useFarmWeather';
@@ -369,16 +370,16 @@ export default function SimulationResultsPage() {
         </div>
       </div>
 
-      {/* 3. LIVE MAP (Updates every simulation timestep!) */}
+      {/* 3. VIRTUAL FARM WORKSPACE TELEMETRY */}
       <div className="card space-y-3">
         <div className="flex items-center justify-between">
           <div>
             <h2 className="section-title flex items-center gap-2">
               <Waves className="w-5 h-5 text-farm-green" />
-              Live Field Simulation Map
+              Virtual Farm Simulation Canvas
             </h2>
             <p className="text-xs text-gray-500">
-              Visualizing crop health, soil moisture, and atmospheric conditions at {currentPoint.label}
+              Visualizing crop health, soil moisture, and microclimate at {currentPoint.label}
             </p>
           </div>
           <span className="text-xs font-bold text-emerald-800 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-900/40 px-2.5 py-1 rounded-full">
@@ -386,25 +387,15 @@ export default function SimulationResultsPage() {
           </span>
         </div>
 
-        <div className="h-[460px] w-full rounded-2xl overflow-hidden border border-gray-200 dark:border-gray-800 shadow-md">
-          <DigitalFarmMap
-            farmName={farm?.name || 'Farm'}
-            center={[farm?.latitude || 30.901, farm?.longitude || 75.8573]}
-            farmBoundary={farm?.boundary}
+        <div className="w-full">
+          <VirtualFarmWorkspace
+            farmName={farm?.name || 'Digital Farm'}
+            totalArea={farm?.area || result.farm_area_acres || 10}
             zones={currentMapZones}
+            onZonesChange={() => {}}
             selectedZoneIndex={null}
-            drawingTool="none"
-            drawingTarget="field"
-            activeLayer="satellite"
-            viewMode="health"
-            isEditingVertices={false}
-            simulatedWeatherCondition={currentPoint.weatherCondition}
-            simulatedTimestepLabel={currentPoint.label}
-            simulatedTemperature={currentPoint.temperature}
-            simulatedRainfall={currentPoint.rainfall}
-            liveWeather={weather}
-            activeVisualizationMode={mapVisMode}
-            onToggleVisualizationMode={(mode) => setMapVisMode(mode)}
+            onSelectZone={() => {}}
+            readOnly={true}
           />
         </div>
       </div>

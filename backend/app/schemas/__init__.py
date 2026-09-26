@@ -193,6 +193,7 @@ class Zone(ZoneInput):
     id: str | None = None
     farm_id: str = Field(validation_alias=AliasChoices("farm_id", "farmId"))
     farmId: str | None = None
+    area: float | None = None
     health_score: float | None = None
     disease_risk: float | None = None
 
@@ -206,6 +207,10 @@ class Zone(ZoneInput):
             self.farmId = self.farm_id
         elif not self.farm_id and self.farmId:
             self.farm_id = self.farmId
+        if self.area is None and self.area_acres is not None:
+            self.area = self.area_acres
+        elif self.area_acres is None and self.area is not None:
+            self.area_acres = self.area
         return self
 
 
@@ -276,8 +281,10 @@ class ScenarioCreate(ContractModel):
 
 
 class Scenario(ContractModel):
-    scenario_id: str
-    farm_id: str
+    scenario_id: str = Field(validation_alias=AliasChoices("scenario_id", "id"))
+    id: str | None = None
+    farm_id: str = Field(validation_alias=AliasChoices("farm_id", "farmId"))
+    farmId: str | None = None
     name: str
     duration_days: int
     target_zones: list[str]
@@ -286,6 +293,18 @@ class Scenario(ContractModel):
     natural_language_query: str | None = None
     description: str | None = None
     created_at: datetime | None = None
+
+    @model_validator(mode="after")
+    def sync_scenario_identifiers(self) -> "Scenario":
+        if not self.id and self.scenario_id:
+            self.id = self.scenario_id
+        elif not self.scenario_id and self.id:
+            self.scenario_id = self.id
+        if not self.farmId and self.farm_id:
+            self.farmId = self.farm_id
+        elif not self.farm_id and self.farmId:
+            self.farm_id = self.farmId
+        return self
 
 
 class SimulationRequest(ContractModel):
@@ -323,8 +342,10 @@ class SimulationSummary(ContractModel):
 
 
 class SimulationResult(ContractModel):
-    simulation_id: str
-    farm_id: str
+    simulation_id: str = Field(validation_alias=AliasChoices("simulation_id", "id"))
+    id: str | None = None
+    farm_id: str = Field(validation_alias=AliasChoices("farm_id", "farmId"))
+    farmId: str | None = None
     scenario_id: str | None = None
     scenario_name: str = "Baseline"
     scenario_type: str = "BASELINE"
@@ -337,6 +358,18 @@ class SimulationResult(ContractModel):
     ai_explanation: str
     status: Literal["completed", "failed"] = "completed"
     created_at: datetime | None = None
+
+    @model_validator(mode="after")
+    def sync_simulation_identifiers(self) -> "SimulationResult":
+        if not self.id and self.simulation_id:
+            self.id = self.simulation_id
+        elif not self.simulation_id and self.id:
+            self.simulation_id = self.id
+        if not self.farmId and self.farm_id:
+            self.farmId = self.farm_id
+        elif not self.farm_id and self.farmId:
+            self.farm_id = self.farmId
+        return self
 
 
 class CompareRequest(ContractModel):
