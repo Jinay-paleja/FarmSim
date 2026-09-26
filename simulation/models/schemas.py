@@ -1,4 +1,5 @@
 from typing import Dict, List, Union
+
 from pydantic import BaseModel, Field
 
 
@@ -30,11 +31,42 @@ class Farm(BaseModel):
 
 
 class Scenario(BaseModel):
-    scenario_id: str
-    name: str
+    """
+    Unified scenario contract shared by the AI/Decision Engine
+    and the Farm Simulation Engine.
+
+    A scenario can be created through:
+    - Manual simulation controls
+    - AI scenario suggestions
+    - Natural-language scenario parsing
+
+    All paths produce this same structure.
+    """
+
+    # Optional compatibility fields.
+    # AI-generated scenarios can omit these.
+    scenario_id: str = "SCN001"
+    name: str = "Custom Scenario"
+
+    # Unified AI scenario type.
+    scenario_type: str = "CUSTOM"
+
     duration_days: int = Field(gt=0)
 
-    changes: Dict[str, Union[float, int, bool, str]] = {}
+    # Empty list means the scenario applies to all zones.
+    # Otherwise, only the listed zone IDs are affected.
+    target_zones: List[str] = Field(
+        default_factory=list
+    )
+
+    # Supported values include numeric modifiers,
+    # booleans such as spread=True, and custom string values.
+    changes: Dict[
+        str,
+        Union[float, int, bool, str],
+    ] = Field(
+        default_factory=dict
+    )
 
 
 class ZoneSimulationResult(BaseModel):

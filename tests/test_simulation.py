@@ -1,3 +1,4 @@
+import pytest
 import sys
 from pathlib import Path
 
@@ -7,7 +8,7 @@ sys.path.insert(
 )
 
 from simulation.models import Farm, Zone, Scenario
-from simulation import simulate_farm
+from simulation import simulate_farmfrom simulation.api import run_simulation
 from simulation.scenarios.handlers import (
     merge_scenario_changes,
 )
@@ -543,3 +544,127 @@ def test_growth_duration_affects_growth_progress():
     # a valid growth-dependent yield calculation.
     for zone in final_point.zones:
         assert zone.expected_yield >= 0
+def test_targeted_rain_reduction_only_affects_target_zone():
+    farm = create_test_farm()
+
+    normal_scenario = Scenario(
+        scenario_id="NORMAL_TEST",
+        name="Normal",
+        duration_days=15,
+        changes={},
+    )
+
+    targeted_scenario = Scenario(
+        scenario_id="TARGETED_RAIN_TEST",
+        name="Targeted Rain Reduction",
+        scenario_type="RAIN_REDUCTION",
+        duration_days=15,
+        target_zones=["ZONE001"],
+        changes={
+            "rainfall_multiplier": 0.0,
+        },
+    )
+
+    normal_result = simulate_farm(
+        farm=farm,
+        scenario=normal_scenario,
+    )
+
+    targeted_result = simulate_farm(
+        farm=farm,
+        scenario=targeted_scenario,
+    )
+
+    normal_zone_1 = normal_result.timeline[-1].zones[0]
+    normal_zone_2 = normal_result.timeline[-1].zones[1]
+
+    targeted_zone_1 = targeted_result.timeline[-1].zones[0]
+    targeted_zone_2 = targeted_result.timeline[-1].zones[1]
+
+    assert targeted_zone_1.soil_moisture != normal_zone_1.soil_moisture
+    assert targeted_zone_2.soil_moisture == normal_zone_2.soil_moisture
+
+
+def test_empty_target_zones_affects_all_zones():
+    farm = create_test_farm()
+
+    normal_scenario = Scenario(
+        scenario_id="NORMAL_TEST",
+        name="Normal",
+        duration_days=15,
+        changes={},
+    )
+
+    farm_wide_scenario = Scenario(
+        scenario_id="FARM_WIDE_RAIN_TEST",
+        name="Farm Wide Rain Reduction",
+        scenario_type="RAIN_REDUCTION",
+        duration_days=15,
+        target_zones=[],
+        changes={
+            "rainfall_multiplier": 0.0,
+        },
+    )
+
+    normal_result = simulate_farm(
+        farm=farm,
+        scenario=normal_scenario,
+    )
+
+    farm_wide_result = simulate_farm(
+        farm=farm,
+        scenario=farm_wide_scenario,
+    )
+
+    for index in range(2):
+        normal_zone = normal_result.timeline[-1].zones[index]
+        changed_zone = farm_wide_result.timeline[-1].zones[index]
+
+        assert changed_zone.soil_moisture != normal_zone.soil_moisture
+
+
+def test_invalid_target_zone_raises_error():
+    farm = create_test_farm()
+
+    scenario = Scenario(
+        scenario_id="INVALID_ZONE_TEST",
+        name="Invalid Zone",
+        duration_days=7,
+        target_zones=["ZONE999"],
+        changes={
+            "rainfall_multiplier": 0.5,
+        },
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="Unknown target zone",
+    ):
+        simulate_farm(
+            farm=farm,
+            scenario=scenario,
+        )
+
+
+def test_api_accepts_unified_scenario_contract():
+    farm = create_test_farm()
+
+    scenario_data = {
+        "scenario_type": "RAIN_REDUCTION",
+        "duration_days": 7,
+        "target_zones": ["ZONE001"],
+        "changes": {
+            "rainfall_multiplier": 0.5,
+        },
+    }
+
+    result = run_simulation(
+        farm_data=farm.model_dump(),
+        scenario_data=scenario_data,
+    )
+
+    assert result["farm_id"] == "TEST_FARM"
+    assert result["scenario_id"] == "SCN001"
+    assert len(result["timeline"]) > 0
+
+

@@ -42,6 +42,62 @@ def get_simulation_days(duration_days):
     return days
 
 
+
+def get_effective_scenario(
+    zone,
+    scenario,
+):
+    """
+    Return the scenario that applies to a specific zone.
+
+    If target_zones is empty, the scenario applies to
+    every zone.
+
+    If target_zones contains zone IDs, only those zones
+    receive the scenario changes.
+    """
+
+    if (
+        not scenario.target_zones
+        or zone.zone_id in scenario.target_zones
+    ):
+        return scenario
+
+    return scenario.model_copy(
+        update={
+            "changes": {},
+        }
+    )
+
+
+def validate_target_zones(
+    farm,
+    scenario,
+):
+    """
+    Validate that all requested target zones exist.
+    """
+
+    if not scenario.target_zones:
+        return
+
+    available_zone_ids = {
+        zone.zone_id
+        for zone in farm.zones
+    }
+
+    invalid_zones = [
+        zone_id
+        for zone_id in scenario.target_zones
+        if zone_id not in available_zone_ids
+    ]
+
+    if invalid_zones:
+        raise ValueError(
+            "Unknown target zone(s): "
+            + ", ".join(invalid_zones)
+        )
+
 def initialize_zone_state(farm: Farm):
     """
     Create the internal simulation state for every zone.
@@ -860,6 +916,11 @@ def simulate_farm(
     returns a validated SimulationResult.
     """
 
+    validate_target_zones(
+        farm,
+        scenario,
+    )
+
     state = initialize_zone_state(farm)
 
     timeline = []
@@ -873,12 +934,19 @@ def simulate_farm(
         scenario.duration_days + 1,
     ):
 
-        # Update environmental conditions
+        # Update environmental conditions.
         for zone in farm.zones:
 
             zone_state = state[
                 zone.zone_id
             ]
+
+            # Apply the scenario only to targeted zones.
+            # Empty target_zones means all zones.
+            effective_scenario = get_effective_scenario(
+                zone,
+                scenario,
+            )
 
             update_growth_progress(
                 zone,
@@ -889,41 +957,43 @@ def simulate_farm(
             update_soil_moisture(
                 zone,
                 zone_state,
-                scenario,
+                effective_scenario,
             )
 
             calculate_zone_nutrients(
                 zone,
                 zone_state,
-                scenario,
+                effective_scenario,
             )
 
             calculate_temperature_stress(
                 zone,
                 zone_state,
-                scenario,
+                effective_scenario,
             )
 
             calculate_zone_disease_risk(
                 zone,
                 zone_state,
-                scenario,
+                effective_scenario,
             )
 
             calculate_zone_pest_pressure(
                 zone,
                 zone_state,
-                scenario,
+                effective_scenario,
             )
 
-        # Spread disease and pests between zones
+        # Spread disease and pests between zones.
+        # The original scenario is intentionally used here
+        # so spread=True can propagate an outbreak.
         spread_between_zones(
             farm,
             state,
             scenario,
         )
 
-        # Update crop condition and yield
+        # Update crop condition and yield.
         for zone in farm.zones:
 
             zone_state = state[
@@ -940,7 +1010,7 @@ def simulate_farm(
                 zone_state,
             )
 
-        # Store requested checkpoint
+        # Store requested checkpoint.
         if day in output_days:
 
             timeline.append(
@@ -956,3 +1026,4 @@ def simulate_farm(
         scenario_id=scenario.scenario_id,
         timeline=timeline,
     )
+
