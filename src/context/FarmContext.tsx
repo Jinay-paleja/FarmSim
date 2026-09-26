@@ -60,9 +60,9 @@ export function FarmProvider({ children }: { children: React.ReactNode }) {
     loadFarms();
   }, [loadFarms]);
 
-  // Filter farms by current logged in user
+  // Filter farms strictly by current logged in user (multi-tenant security)
   const userFarms = useMemo(() => {
-    if (!user) return allFarms;
+    if (!user) return [];
     return allFarms.filter((f) => f.ownerId === user.id);
   }, [allFarms, user]);
 

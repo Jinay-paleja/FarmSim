@@ -1,16 +1,18 @@
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { MapPin, Ruler, Grid3x3, Sprout, ArrowRight, Loader2, Sparkles, User as UserIcon } from 'lucide-react';
+import { useState, useEffect, useMemo } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
+import { MapPin, Ruler, Grid3x3, Sprout, ArrowRight, Loader2, Sparkles, User as UserIcon, LogIn, Shield } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { farmApi } from '../services/api';
 import { isMockEnabled, createMockFarm } from '../services/mockData';
 import { useFarmContext } from '../context/FarmContext';
 import { useAuth } from '../context/AuthContext';
+import { calculatePolygonArea } from '../services/mapGeometry';
+import BoundaryMapPicker from '../components/map/BoundaryMapPicker';
 import type { FarmCreateInput, Farm } from '../types';
 
 export default function FarmCreatePage() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, isAuthenticated } = useAuth();
   const { refreshFarms, selectFarm } = useFarmContext();
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState<FarmCreateInput>({
@@ -23,6 +25,10 @@ export default function FarmCreatePage() {
     ownerId: user?.id,
   });
 
+  // Boundary drawing state
+  const [boundaryPoints, setBoundaryPoints] = useState<[number, number][]>([]);
+  const [mapCenter, setMapCenter] = useState<[number, number] | undefined>(undefined);
+
   useEffect(() => {
     if (user) {
       setForm((prev) => ({
@@ -33,20 +39,24 @@ export default function FarmCreatePage() {
     }
   }, [user]);
 
-  const [errors, setErrors] = useState<Partial<Record<keyof FarmCreateInput, string>>>({});
+  const [errors, setErrors] = useState<Partial<Record<string, string>>>({});
+
+  // Mapped area calculation
+  const mappedArea = useMemo(() => {
+    if (boundaryPoints.length < 3) return null;
+    return calculatePolygonArea(boundaryPoints);
+  }, [boundaryPoints]);
 
   const validate = (): boolean => {
-    const newErrors: Partial<Record<keyof FarmCreateInput, string>> = {};
+    const newErrors: Partial<Record<string, string>> = {};
     if (!form.name.trim()) newErrors.name = 'Farm name is required';
     if (!form.location.trim()) newErrors.location = 'Location is required';
     if (form.area <= 0) newErrors.area = 'Area must be greater than 0';
     if (form.numberOfZones < 1) newErrors.numberOfZones = 'At least 1 zone is required';
     if (form.numberOfZones > 20) newErrors.numberOfZones = 'Maximum 20 zones allowed';
-    if (form.latitude !== undefined && (form.latitude < -90 || form.latitude > 90)) {
-      newErrors.latitude = 'Latitude must be between -90 and 90';
-    }
-    if (form.longitude !== undefined && (form.longitude < -180 || form.longitude > 180)) {
-      newErrors.longitude = 'Longitude must be between -180 and 180';
+    // Boundary: 0 points is fine (optional), but 1-2 points is invalid
+    if (boundaryPoints.length > 0 && boundaryPoints.length < 3) {
+      newErrors.boundary = 'Please mark at least 3 points on the map to define the farm boundary.';
     }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -57,9 +67,38 @@ export default function FarmCreatePage() {
     if (!validate()) return;
 
     setLoading(true);
+
+    // Build boundary data
+    const hasBoundary = boundaryPoints.length >= 3;
+    const centerLat = hasBoundary
+      ? boundaryPoints.reduce((s, p) => s + p[0], 0) / boundaryPoints.length
+      : form.latitude;
+    const centerLng = hasBoundary
+      ? boundaryPoints.reduce((s, p) => s + p[1], 0) / boundaryPoints.length
+      : form.longitude;
+
     const payload: FarmCreateInput = {
       ...form,
       ownerId: user?.id || 'farmer_punjab',
+      latitude: centerLat,
+      longitude: centerLng,
+      boundary: hasBoundary ? boundaryPoints : undefined,
+      boundary_points: hasBoundary
+        ? boundaryPoints.map(([lat, lng]) => ({ latitude: lat, longitude: lng }))
+        : undefined,
+      boundaryGeoJson: hasBoundary
+        ? {
+            type: 'Polygon' as const,
+            coordinates: [
+              [
+                ...boundaryPoints.map(([lat, lng]) => [lng, lat] as [number, number]),
+                [boundaryPoints[0][1], boundaryPoints[0][0]] as [number, number],
+              ],
+            ],
+          }
+        : undefined,
+      mapped_area: hasBoundary && mappedArea ? mappedArea.acres : undefined,
+      total_area: form.area,
     };
 
     try {
@@ -96,9 +135,37 @@ export default function FarmCreatePage() {
     }
   };
 
+  // ===== LOGIN GATE =====
+  if (!isAuthenticated || !user) {
+    return (
+      <div className="page-container">
+        <div className="max-w-md mx-auto text-center py-16">
+          <div className="w-16 h-16 rounded-2xl bg-farm-green-pale flex items-center justify-center mx-auto mb-6">
+            <Shield className="w-8 h-8 text-farm-green" />
+          </div>
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">Sign in to Create Your Farm</h1>
+          <p className="text-gray-500 mb-8">
+            You need to be logged in to create a new farm. Sign in with your existing account or register as a new farmer.
+          </p>
+          <Link
+            to="/login"
+            state={{ from: { pathname: '/farms/create' } }}
+            className="btn-primary inline-flex items-center gap-2 px-8 py-3.5 text-lg"
+          >
+            <LogIn className="w-5 h-5" />
+            Sign In / Register
+          </Link>
+          <p className="text-xs text-gray-400 mt-6">
+            After signing in, you'll be redirected back to create your farm.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="page-container">
-      <div className="max-w-2xl mx-auto">
+      <div className="max-w-3xl mx-auto">
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center gap-3 mb-2">
@@ -108,7 +175,7 @@ export default function FarmCreatePage() {
             <h1 className="page-title">Create Your Farm</h1>
           </div>
           <p className="text-gray-500 ml-[52px]">
-            Set up your farm details. You'll configure zones and crops in the next step.
+            Set up your farm details and draw the boundary on the map. You'll configure zones and crops in the next step.
           </p>
           {user && (
             <div className="ml-[52px] mt-3 inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-xs text-emerald-800">
@@ -169,6 +236,7 @@ export default function FarmCreatePage() {
                         updateField('location', preset.name);
                         updateField('latitude', preset.lat);
                         updateField('longitude', preset.lng);
+                        setMapCenter([preset.lat, preset.lng]);
                       }}
                       className="text-xs px-2.5 py-1 rounded-lg bg-stone-100 hover:bg-emerald-50 hover:text-farm-green text-gray-600 transition-colors border border-gray-200"
                     >
@@ -220,52 +288,39 @@ export default function FarmCreatePage() {
             </div>
           </div>
 
-          {/* Coordinates */}
+          {/* Farm Boundary — replaces the old Coordinates section */}
           <div className="card">
             <h2 className="section-title flex items-center gap-2 mb-1">
               <MapPin className="w-4 h-4 text-farm-green" />
-              Coordinates
-              <span className="text-xs font-normal text-gray-400">(Optional)</span>
+              Farm Boundary
             </h2>
             <p className="text-sm text-gray-400 mb-4">
-              Add latitude and longitude for precise location mapping.
+              Click points on the map to define your farm's boundary. You need at least 3 points to create a valid polygon.
+              Markers are draggable — adjust positions after placing.
             </p>
-            <div className="grid sm:grid-cols-2 gap-4">
-              <div>
-                <label className="label">Latitude</label>
-                <input
-                  type="number"
-                  className={`input-field ${errors.latitude ? 'border-red-300' : ''}`}
-                  placeholder="e.g., 28.6139"
-                  step="0.0001"
-                  min="-90"
-                  max="90"
-                  value={form.latitude ?? ''}
-                  onChange={(e) => updateField('latitude', e.target.value ? parseFloat(e.target.value) : undefined)}
-                />
-                {errors.latitude && <p className="text-sm text-red-500 mt-1">{errors.latitude}</p>}
-              </div>
-              <div>
-                <label className="label">Longitude</label>
-                <input
-                  type="number"
-                  className={`input-field ${errors.longitude ? 'border-red-300' : ''}`}
-                  placeholder="e.g., 77.2090"
-                  step="0.0001"
-                  min="-180"
-                  max="180"
-                  value={form.longitude ?? ''}
-                  onChange={(e) => updateField('longitude', e.target.value ? parseFloat(e.target.value) : undefined)}
-                />
-                {errors.longitude && <p className="text-sm text-red-500 mt-1">{errors.longitude}</p>}
-              </div>
-            </div>
+
+            <BoundaryMapPicker
+              points={boundaryPoints}
+              onPointsChange={(pts) => {
+                setBoundaryPoints(pts);
+                if (errors.boundary) {
+                  setErrors((prev) => ({ ...prev, boundary: undefined }));
+                }
+              }}
+              locationQuery={form.location}
+              enteredAreaAcres={form.area}
+              initialCenter={mapCenter}
+            />
+
+            {errors.boundary && (
+              <p className="text-sm text-red-500 mt-2">{errors.boundary}</p>
+            )}
           </div>
 
           {/* Preview Summary */}
           <div className="bg-farm-green-pale/50 rounded-2xl p-5 border border-farm-green/10">
             <h3 className="text-sm font-semibold text-farm-green mb-3">Farm Summary</h3>
-            <div className="grid grid-cols-3 gap-4 text-center">
+            <div className={`grid ${boundaryPoints.length >= 3 ? 'grid-cols-2 sm:grid-cols-4' : 'grid-cols-3'} gap-4 text-center`}>
               <div>
                 <p className="text-2xl font-bold text-farm-green">{form.area || 0}</p>
                 <p className="text-xs text-farm-green/70">acres</p>
@@ -280,7 +335,18 @@ export default function FarmCreatePage() {
                 </p>
                 <p className="text-xs text-farm-green/70">acres/zone</p>
               </div>
+              {boundaryPoints.length >= 3 && mappedArea && (
+                <div>
+                  <p className="text-2xl font-bold text-farm-green">{mappedArea.acres}</p>
+                  <p className="text-xs text-farm-green/70">mapped acres</p>
+                </div>
+              )}
             </div>
+            {boundaryPoints.length >= 3 && (
+              <div className="mt-3 pt-3 border-t border-farm-green/10 text-xs text-farm-green/70 text-center">
+                Boundary: {boundaryPoints.length} points defined on map
+              </div>
+            )}
           </div>
 
           {/* Submit */}

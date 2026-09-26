@@ -1,59 +1,76 @@
-import { useState } from 'react';
-import { useNavigate, useLocation, Link } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, useLocation, Link, useSearchParams } from 'react-router-dom';
 import {
-  Sprout, User as UserIcon, Mail, Lock, MapPin, ArrowRight,
-  ShieldCheck, CheckCircle2, Sparkles, Tractor, Compass, LogIn
+  Sprout, Mail, Lock, User as UserIcon, MapPin, ArrowRight,
+  ShieldCheck, Loader2, Sparkles, CheckCircle2, Eye, EyeOff
 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { useAuth, DEMO_FARMERS } from '../context/AuthContext';
-import { useFarmContext } from '../context/FarmContext';
+import { useAuth } from '../context/AuthContext';
+import { authService, DEMO_DEV_ACCOUNTS } from '../services/auth';
 
-export default function LoginPage() {
+interface LoginPageProps {
+  initialMode?: 'signin' | 'signup';
+}
+
+export default function LoginPage({ initialMode }: LoginPageProps) {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, login, signup, demoLogin, availableDemoFarmers } = useAuth();
-  const { farms, allFarms } = useFarmContext();
+  const [searchParams] = useSearchParams();
+  const { isAuthenticated, login, signup, demoLogin } = useAuth();
 
-  const [mode, setMode] = useState<'signin' | 'signup'>('signin');
+  const queryMode = searchParams.get('mode');
+  const [mode, setMode] = useState<'signin' | 'signup'>(
+    initialMode || (queryMode === 'signup' ? 'signup' : 'signin')
+  );
+
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(true);
 
-  // Form states
-  const [email, setEmail] = useState('');
+  // Form fields
+  const [email, setEmail] = useState(() => authService.getRememberedEmail() || '');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
   const [farmRegion, setFarmRegion] = useState('');
   const [specialty, setSpecialty] = useState('');
 
-  const redirectPath = (location.state as any)?.from?.pathname || '/';
+  // Target redirect path after login
+  const redirectPath = (location.state as any)?.from?.pathname || '/dashboard';
 
-  const handleDemoSelect = (farmerId: string) => {
-    demoLogin(farmerId);
-    const demo = DEMO_FARMERS.find((f) => f.id === farmerId);
-    toast.success(`Welcome back, ${demo?.name}!`, { icon: '🌾' });
-
-    // Find first farm owned by this demo farmer
-    const farmerFarm = allFarms.find((f) => f.ownerId === farmerId);
-    if (farmerFarm) {
-      navigate(`/farms/${farmerFarm.id}`);
-    } else {
-      navigate('/');
+  // If already authenticated, redirect to /dashboard
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate('/dashboard', { replace: true });
     }
-  };
+  }, [isAuthenticated, navigate]);
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email.trim()) {
-      toast.error('Please enter your email');
+      toast.error('Please enter your email address');
+      return;
+    }
+    if (!password.trim()) {
+      toast.error('Please enter your password');
       return;
     }
 
     setLoading(true);
     try {
-      await login(email, password);
-      toast.success('Signed in successfully!');
-      navigate(redirectPath);
-    } catch {
-      toast.error('Sign in failed. Please try again.');
+      const success = await login({
+        email,
+        password,
+        rememberMe,
+      });
+
+      if (success) {
+        toast.success('Signed in successfully! Loading your dashboard...');
+        navigate(redirectPath, { replace: true });
+      } else {
+        toast.error('Invalid credentials. Please verify your email and password.');
+      }
+    } catch (err: any) {
+      toast.error(err?.message || 'Authentication failed');
     } finally {
       setLoading(false);
     }
@@ -62,344 +79,295 @@ export default function LoginPage() {
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) {
-      toast.error('Please enter your full name');
+      toast.error('Please enter your name');
       return;
     }
     if (!email.trim()) {
-      toast.error('Please enter your email');
+      toast.error('Please enter your email address');
+      return;
+    }
+    if (!password.trim()) {
+      toast.error('Please enter a password');
       return;
     }
 
     setLoading(true);
     try {
       const newUser = await signup({
-        name,
-        email,
+        name: name.trim(),
+        email: email.trim(),
         password,
-        location: farmRegion || 'Custom Agricultural Region',
-        specialty: specialty || 'Crop & Soil Management',
+        location: farmRegion.trim() || 'Agricultural Region',
+        specialty: specialty.trim() || 'Crop & Soil Management',
       });
-      toast.success(`Account created for ${newUser.name}! Let's build your first farm.`);
-      navigate('/farms/create');
-    } catch {
-      toast.error('Account creation failed.');
+
+      toast.success(`Welcome to FarmSim AI, ${newUser.name}!`);
+      navigate('/dashboard', { replace: true });
+    } catch (err: any) {
+      toast.error(err?.message || 'Registration failed');
     } finally {
       setLoading(false);
     }
   };
 
-  const hasDemoAccounts = availableDemoFarmers.length > 0;
+  const handleForgotPassword = (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (!email.trim()) {
+      toast('Please enter your email first to receive a password reset link', { icon: '✉️' });
+    } else {
+      toast.success(`Password reset simulation link sent to ${email}`);
+    }
+  };
+
+  // Isolated development helper
+  const handleDevQuickFill = async (farmerId: string) => {
+    const demo = DEMO_DEV_ACCOUNTS.find((d) => d.id === farmerId);
+    if (!demo) return;
+    setLoading(true);
+    try {
+      await demoLogin(farmerId);
+      toast.success(`Logged in as test farmer: ${demo.name}`, { icon: '🌾' });
+      navigate(redirectPath, { replace: true });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
-    <div className="min-h-[calc(100vh-4rem)] bg-stone-50 py-10 px-4 sm:px-6 lg:px-8 flex items-center justify-center">
-      <div className={`w-full ${hasDemoAccounts ? 'max-w-4xl grid md:grid-cols-12 gap-8 items-center' : 'max-w-md mx-auto space-y-6'}`}>
-        {/* Left Side: Context & Demo Accounts (when enabled) */}
-        {hasDemoAccounts && (
-          <div className="md:col-span-5 space-y-6">
-            <div>
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-farm-green-pale text-farm-green text-xs font-bold uppercase tracking-wider mb-3">
-                <Tractor className="w-3.5 h-3.5" /> Farmer Portal
-              </div>
-              <h1 className="text-3xl font-extrabold text-gray-900 leading-tight">
-                Manage Your Digital Twin Farms
-              </h1>
-              <p className="text-sm text-gray-600 mt-2">
-                Every farmer has isolated access to their farm boundaries, satellite field zones, live weather intelligence, and AI scenario simulations.
-              </p>
-            </div>
-
-            {/* Quick Demo Logins */}
-            <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="text-xs font-bold text-gray-800 uppercase tracking-wider flex items-center gap-1.5">
-                  <Sparkles className="w-3.5 h-3.5 text-amber-500" /> 1-Click Demo Farmers
-                </div>
-                <span className="text-[10px] bg-amber-50 text-amber-700 px-2 py-0.5 rounded-full font-medium">Instant Access</span>
-              </div>
-              <p className="text-xs text-gray-500">
-                Test multi-user isolation right away with pre-configured regional farms:
-              </p>
-
-              <div className="space-y-2.5 pt-1">
-                {availableDemoFarmers.map((farmer) => {
-                  const isSelected = user?.id === farmer.id;
-                  return (
-                    <button
-                      key={farmer.id}
-                      type="button"
-                      onClick={() => handleDemoSelect(farmer.id)}
-                      className={`w-full text-left p-3 rounded-xl border transition-all flex items-center justify-between group cursor-pointer ${
-                        isSelected
-                          ? 'border-farm-green bg-farm-green-pale/40 shadow-xs'
-                          : 'border-gray-100 hover:border-gray-300 hover:bg-stone-50 bg-white'
-                      }`}
-                    >
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className="w-10 h-10 rounded-xl bg-farm-green-pale flex items-center justify-center text-xl flex-shrink-0">
-                        {farmer.avatarEmoji}
-                      </div>
-                      <div className="min-w-0">
-                        <div className="text-xs font-bold text-gray-900 group-hover:text-farm-green transition-colors flex items-center gap-1.5">
-                          {farmer.name}
-                          {isSelected && <span className="text-[9px] bg-farm-green text-white px-1.5 py-0.2 rounded-full font-semibold">Active</span>}
-                        </div>
-                        <div className="text-[11px] text-gray-500 truncate">{farmer.location}</div>
-                        <div className="text-[10px] text-gray-400 truncate">{farmer.specialty}</div>
-                      </div>
-                    </div>
-                    <ArrowRight className="w-4 h-4 text-gray-300 group-hover:text-farm-green group-hover:translate-x-0.5 transition-all flex-shrink-0" />
-                  </button>
-                );
-              })}
-            </div>
+    <div className="min-h-screen bg-stone-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+      <div className="sm:mx-auto sm:w-full sm:max-w-md">
+        {/* Brand Logo */}
+        <Link to="/" className="flex items-center justify-center gap-2.5 mb-6 group">
+          <div className="w-12 h-12 rounded-2xl bg-farm-green flex items-center justify-center shadow-lg group-hover:scale-105 transition-transform">
+            <Sprout className="w-6 h-6 text-white" />
           </div>
+          <span className="font-extrabold text-2xl text-gray-900 tracking-tight">
+            FarmSim <span className="text-farm-green">AI</span>
+          </span>
+        </Link>
 
-          {/* Privacy & Isolation Feature list */}
-          <div className="space-y-2 text-xs text-gray-500 pt-2">
-            <div className="flex items-center gap-2">
-              <CheckCircle2 className="w-4 h-4 text-farm-green flex-shrink-0" />
-              <span>Independent field boundaries and acreage calculation</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <CheckCircle2 className="w-4 h-4 text-farm-green flex-shrink-0" />
-              <span>Dedicated Open-Meteo microclimate forecasting</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <CheckCircle2 className="w-4 h-4 text-farm-green flex-shrink-0" />
-              <span>Private Random Forest yield & stress simulations</span>
-            </div>
-          </div>
-        </div>
-        )}
-
-        {/* Right Side / Centered: Auth Box */}
-        <div className={hasDemoAccounts ? "md:col-span-7" : "w-full"}>
-          <div className="bg-white rounded-3xl border border-gray-200 shadow-xl overflow-hidden">
-            {/* Header Tabs */}
-            <div className="grid grid-cols-2 border-b border-gray-100 bg-stone-50/60 p-1.5 gap-1">
-              <button
-                type="button"
-                onClick={() => setMode('signin')}
-                className={`py-2.5 text-xs font-bold rounded-xl transition-all cursor-pointer ${
-                  mode === 'signin'
-                    ? 'bg-white text-farm-green shadow-xs'
-                    : 'text-gray-500 hover:text-gray-900'
-                }`}
-              >
-                Sign In to Account
-              </button>
+        <h2 className="text-center text-2xl font-bold text-gray-900">
+          {mode === 'signin' ? 'Sign in to your farmer portal' : 'Register a new farmer account'}
+        </h2>
+        <p className="mt-2 text-center text-xs text-gray-500">
+          {mode === 'signin' ? (
+            <>
+              New to FarmSim?{' '}
               <button
                 type="button"
                 onClick={() => setMode('signup')}
-                className={`py-2.5 text-xs font-bold rounded-xl transition-all cursor-pointer ${
-                  mode === 'signup'
-                    ? 'bg-white text-farm-green shadow-xs'
-                    : 'text-gray-500 hover:text-gray-900'
-                }`}
+                className="font-bold text-farm-green hover:underline"
               >
-                Create New Farmer Account
+                Create your account
               </button>
-            </div>
+            </>
+          ) : (
+            <>
+              Already registered?{' '}
+              <button
+                type="button"
+                onClick={() => setMode('signin')}
+                className="font-bold text-farm-green hover:underline"
+              >
+                Sign in here
+              </button>
+            </>
+          )}
+        </p>
+      </div>
 
-            <div className="p-6 sm:p-8">
-              {mode === 'signin' ? (
-                /* SIGN IN FORM */
-                <form onSubmit={handleSignIn} className="space-y-4">
-                  <div>
-                    <h2 className="text-xl font-bold text-gray-900">Welcome Back</h2>
-                    <p className="text-xs text-gray-500 mt-1">
-                      Enter your farmer email credentials to access your properties.
-                    </p>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-gray-700 mb-1.5">
-                      Farmer Email Address
-                    </label>
-                    <div className="relative">
-                      <Mail className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                      <input
-                        type="email"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        placeholder="e.g. harpreet.singh@farm.ai or your email"
-                        className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-farm-green/30 focus:border-farm-green"
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <div className="flex items-center justify-between mb-1.5">
-                      <label className="block text-xs font-bold text-gray-700">
-                        Password
-                      </label>
-                      <span className="text-[11px] text-gray-400">Optional for demo</span>
-                    </div>
-                    <div className="relative">
-                      <Lock className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                      <input
-                        type="password"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        placeholder="••••••••"
-                        className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-farm-green/30 focus:border-farm-green"
-                      />
-                    </div>
-                  </div>
-
-                  <button
-                    type="submit"
-                    disabled={loading}
-                    className="w-full bg-farm-green hover:bg-farm-green-dark text-white font-bold py-3 px-4 rounded-xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer text-sm"
-                  >
-                    <LogIn className="w-4 h-4" />
-                    {loading ? 'Authenticating...' : 'Sign In to Dashboard'}
-                  </button>
-
-                  <div className="pt-2 text-center text-xs text-gray-500">
-                    Need a new farm profile?{' '}
-                    <button
-                      type="button"
-                      onClick={() => setMode('signup')}
-                      className="text-farm-green font-bold hover:underline cursor-pointer"
-                    >
-                      Register here
-                    </button>
-                  </div>
-                </form>
-              ) : (
-                /* SIGN UP FORM */
-                <form onSubmit={handleSignUp} className="space-y-4">
-                  <div>
-                    <h2 className="text-xl font-bold text-gray-900">Create Farmer Account</h2>
-                    <p className="text-xs text-gray-500 mt-1">
-                      Register to build and simulate your own independent farm portfolio.
-                    </p>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-gray-700 mb-1.5">
-                      Farmer Full Name *
-                    </label>
-                    <div className="relative">
-                      <UserIcon className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                      <input
-                        type="text"
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
-                        placeholder="e.g. Ramesh Patel"
-                        className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-farm-green/30 focus:border-farm-green"
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-gray-700 mb-1.5">
-                      Email Address *
-                    </label>
-                    <div className="relative">
-                      <Mail className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                      <input
-                        type="email"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        placeholder="ramesh.patel@agri.com"
-                        className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-farm-green/30 focus:border-farm-green"
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-xs font-bold text-gray-700 mb-1.5">
-                        Location / Region
-                      </label>
-                      <div className="relative">
-                        <MapPin className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                        <input
-                          type="text"
-                          value={farmRegion}
-                          onChange={(e) => setFarmRegion(e.target.value)}
-                          placeholder="e.g. Surat, Gujarat"
-                          className="w-full pl-10 pr-3 py-2.5 rounded-xl border border-gray-200 text-xs focus:outline-none focus:ring-2 focus:ring-farm-green/30 focus:border-farm-green"
-                        />
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-bold text-gray-700 mb-1.5">
-                        Primary Crops / Specialty
-                      </label>
-                      <div className="relative">
-                        <Sprout className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                        <input
-                          type="text"
-                          value={specialty}
-                          onChange={(e) => setSpecialty(e.target.value)}
-                          placeholder="e.g. Cotton & Sugarcane"
-                          className="w-full pl-10 pr-3 py-2.5 rounded-xl border border-gray-200 text-xs focus:outline-none focus:ring-2 focus:ring-farm-green/30 focus:border-farm-green"
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-gray-700 mb-1.5">
-                      Password (Optional)
-                    </label>
-                    <div className="relative">
-                      <Lock className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                      <input
-                        type="password"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        placeholder="••••••••"
-                        className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-farm-green/30 focus:border-farm-green"
-                      />
-                    </div>
-                  </div>
-
-                  <button
-                    type="submit"
-                    disabled={loading}
-                    className="w-full bg-farm-green hover:bg-farm-green-dark text-white font-bold py-3 px-4 rounded-xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer text-sm"
-                  >
-                    <Sprout className="w-4 h-4" />
-                    {loading ? 'Creating Profile...' : 'Complete Registration & Start Farm'}
-                  </button>
-
-                  <div className="pt-2 text-center text-xs text-gray-500">
-                    Already registered?{' '}
-                    <button
-                      type="button"
-                      onClick={() => setMode('signin')}
-                      className="text-farm-green font-bold hover:underline cursor-pointer"
-                    >
-                      Sign in here
-                    </button>
-                  </div>
-                </form>
-              )}
-            </div>
-
-            {/* Currently Active Farmer indicator */}
-            {user && (
-              <div className="bg-stone-50 border-t border-gray-100 p-4 px-6 flex items-center justify-between text-xs text-gray-600">
-                <div className="flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                  <span>Currently logged in: <strong className="text-gray-900">{user.name}</strong> ({farms.length} farm{farms.length !== 1 ? 's' : ''})</span>
+      <div className="mt-6 sm:mx-auto sm:w-full sm:max-w-md px-4 sm:px-0">
+        <div className="card shadow-lg border border-gray-200 p-6 sm:p-8">
+          {mode === 'signin' ? (
+            /* SIGN IN FORM */
+            <form onSubmit={handleSignIn} className="space-y-5">
+              <div>
+                <label className="label">Email Address</label>
+                <div className="relative">
+                  <Mail className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="email"
+                    required
+                    autoComplete="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="farmer@farm.ai"
+                    className="input-field pl-10"
+                  />
                 </div>
-                <Link
-                  to="/"
-                  className="text-farm-green font-bold hover:underline flex items-center gap-1"
-                >
-                  Go to App <ArrowRight className="w-3 h-3" />
-                </Link>
               </div>
-            )}
+
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="label mb-0">Password</label>
+                  <button
+                    type="button"
+                    onClick={handleForgotPassword}
+                    className="text-xs text-farm-green font-medium hover:underline"
+                  >
+                    Forgot password?
+                  </button>
+                </div>
+                <div className="relative">
+                  <Lock className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    required
+                    autoComplete="current-password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="••••••••"
+                    className="input-field pl-10 pr-10"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between text-xs">
+                <label className="flex items-center gap-2 cursor-pointer text-gray-600">
+                  <input
+                    type="checkbox"
+                    checked={rememberMe}
+                    onChange={(e) => setRememberMe(e.target.checked)}
+                    className="rounded border-gray-300 text-farm-green focus:ring-farm-green/30"
+                  />
+                  <span>Remember me on this device</span>
+                </label>
+              </div>
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="btn-primary w-full flex items-center justify-center gap-2 py-3 text-sm font-bold shadow-md"
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Signing In...
+                  </>
+                ) : (
+                  <>
+                    Sign In to FarmSim
+                    <ArrowRight className="w-4 h-4" />
+                  </>
+                )}
+              </button>
+            </form>
+          ) : (
+            /* SIGN UP FORM */
+            <form onSubmit={handleSignUp} className="space-y-4">
+              <div>
+                <label className="label">Full Name *</label>
+                <div className="relative">
+                  <UserIcon className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text"
+                    required
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="e.g. Harpreet Singh"
+                    className="input-field pl-10"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="label">Email Address *</label>
+                <div className="relative">
+                  <Mail className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="email"
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="farmer@domain.com"
+                    className="input-field pl-10"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="label">Password *</label>
+                <div className="relative">
+                  <Lock className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    required
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="At least 6 characters"
+                    className="input-field pl-10 pr-10"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label className="label">Farm Region / Location (Optional)</label>
+                <div className="relative">
+                  <MapPin className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text"
+                    value={farmRegion}
+                    onChange={(e) => setFarmRegion(e.target.value)}
+                    placeholder="e.g. Ludhiana, Punjab or Fresno, CA"
+                    className="input-field pl-10"
+                  />
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="btn-primary w-full flex items-center justify-center gap-2 py-3 text-sm font-bold shadow-md mt-2"
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Registering Account...
+                  </>
+                ) : (
+                  <>
+                    Create Account & Continue
+                    <ArrowRight className="w-4 h-4" />
+                  </>
+                )}
+              </button>
+            </form>
+          )}
+
+          {/* ISOLATED DEV TEST ACCOUNTS (ONLY FOR LOCAL DEVELOPMENT) */}
+          <div className="mt-6 pt-5 border-t border-gray-100">
+            <div className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2.5 flex items-center gap-1.5">
+              <Sparkles className="w-3 h-3 text-amber-500" />
+              Dev Quick-Fill Test Accounts:
+            </div>
+            <div className="grid grid-cols-3 gap-2">
+              {DEMO_DEV_ACCOUNTS.map((account) => (
+                <button
+                  key={account.id}
+                  type="button"
+                  onClick={() => handleDevQuickFill(account.id)}
+                  className="p-2 rounded-xl bg-stone-50 border border-gray-200 text-left hover:border-farm-green hover:bg-emerald-50/50 transition-all text-xs"
+                >
+                  <div className="text-base mb-0.5">{account.avatarEmoji}</div>
+                  <div className="font-bold text-gray-800 truncate">{account.name.split(' ')[0]}</div>
+                  <div className="text-[10px] text-gray-500 truncate">{account.location ? account.location.split(',')[0] : 'Region'}</div>
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       </div>

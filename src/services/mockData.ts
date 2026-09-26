@@ -5,8 +5,14 @@
  */
 
 import type {
-  Farm, Zone, SimulationResult, ComparisonResult, CropType, SoilType,
+  Farm, Zone, SimulationResult, ComparisonResult, CropType, SoilType, FarmCreateInput,
 } from '../types';
+import {
+  calculatePolygonArea,
+  calculatePerimeter,
+  getPolygonCenter,
+  generateDefaultPlotBoundaries,
+} from './mapGeometry';
 
 const MOCK_ENABLED = true; // Set to false to disable mock data
 
@@ -14,63 +20,58 @@ export function isMockEnabled(): boolean {
   return MOCK_ENABLED;
 }
 
-export function createMockFarm(input: { name: string; location: string; area: number; numberOfZones: number; latitude?: number; longitude?: number; ownerId?: string }): Farm {
+export function createMockFarm(input: FarmCreateInput): Farm {
   const farmId = `farm_${Date.now()}`;
   
-  // Choose sensible center coordinates if not specified
+  let boundary: [number, number][];
   let lat = input.latitude;
   let lng = input.longitude;
-  if (!lat || !lng) {
-    const loc = (input.location || '').toLowerCase();
-    if (loc.includes('punjab') || loc.includes('india')) {
-      lat = 30.9010; lng = 75.8573;
-    } else if (loc.includes('california') || loc.includes('fresno')) {
-      lat = 36.7468; lng = -119.7726;
-    } else if (loc.includes('iowa')) {
-      lat = 42.0308; lng = -93.6319;
-    } else {
-      lat = 30.9010; lng = 75.8573;
+
+  if (input.boundary && input.boundary.length >= 3) {
+    boundary = [...input.boundary];
+    const center = getPolygonCenter(boundary);
+    if (!lat || !lng) {
+      lat = center[0];
+      lng = center[1];
     }
+  } else {
+    // Choose sensible center coordinates if not specified
+    if (!lat || !lng) {
+      const loc = (input.location || '').toLowerCase();
+      if (loc.includes('punjab') || loc.includes('india')) {
+        lat = 30.9010; lng = 75.8573;
+      } else if (loc.includes('mumbai') || loc.includes('maharashtra')) {
+        lat = 19.0760; lng = 72.8777;
+      } else if (loc.includes('california') || loc.includes('fresno')) {
+        lat = 36.7468; lng = -119.7726;
+      } else if (loc.includes('iowa') || loc.includes('ames')) {
+        lat = 42.0308; lng = -93.6319;
+      } else {
+        lat = 30.9010; lng = 75.8573;
+      }
+    }
+
+    // Generate boundary polygon around center
+    const sideM = Math.sqrt(input.area * 4046.86) / 2;
+    const dLat = sideM / 111320;
+    const dLng = sideM / (111320 * Math.cos((lat * Math.PI) / 180));
+
+    boundary = [
+      [lat + dLat, lng - dLng],
+      [lat + dLat, lng + dLng],
+      [lat - dLat, lng + dLng],
+      [lat - dLat, lng - dLng],
+    ];
   }
 
-  // Generate boundary polygon around center
-  const center: [number, number] = [lat, lng];
-  const sideM = Math.sqrt(input.area * 4046.86) / 2;
-  const dLat = sideM / 111320;
-  const dLng = sideM / (111320 * Math.cos((lat * Math.PI) / 180));
+  const measuredArea = calculatePolygonArea(boundary);
+  const measuredPerimeter = calculatePerimeter(boundary);
 
-  const boundary: [number, number][] = [
-    [lat + dLat, lng - dLng],
-    [lat + dLat, lng + dLng],
-    [lat - dLat, lng + dLng],
-    [lat - dLat, lng - dLng],
-  ];
+  // Generate initial sub-plots using generateDefaultPlotBoundaries inside boundary
+  const defaultPlots = generateDefaultPlotBoundaries(boundary, input.numberOfZones);
 
-  // Generate initial sub-plots
-  const count = input.numberOfZones;
-  const cols = Math.ceil(Math.sqrt(count));
-  const rows = Math.ceil(count / cols);
-  const colW = (dLng * 1.8) / cols;
-  const rowH = (dLat * 1.8) / rows;
-  const minLt = lat - dLat * 0.9;
-  const maxLt = lat + dLat * 0.9;
-  const minLg = lng - dLng * 0.9;
-
-  const zones: Zone[] = Array.from({ length: count }, (_, i) => {
-    const r = Math.floor(i / cols);
-    const c = i % cols;
-    const pMaxLat = maxLt - r * rowH - rowH * 0.05;
-    const pMinLat = maxLt - (r + 1) * rowH + rowH * 0.05;
-    const pMinLng = minLg + c * colW + colW * 0.05;
-    const pMaxLng = minLg + (c + 1) * colW - colW * 0.05;
-
-    const plotPoly: [number, number][] = [
-      [pMaxLat, pMinLng],
-      [pMaxLat, pMaxLng],
-      [pMinLat, pMaxLng],
-      [pMinLat, pMinLng],
-    ];
-
+  const zones: Zone[] = Array.from({ length: input.numberOfZones }, (_, i) => {
+    const plotPoly = defaultPlots[i] || boundary;
     const health = 65 + Math.random() * 30;
     const moisture = 50 + Math.random() * 25;
     const disease = Math.random() * 30;
@@ -100,19 +101,39 @@ export function createMockFarm(input: { name: string; location: string; area: nu
     };
   });
 
+  // Prepare GeoJSON representation [lng, lat]
+  const geoJsonRing: [number, number][] = boundary.map(([bLat, bLng]) => [bLng, bLat]);
+  if (geoJsonRing.length > 0) {
+    // GeoJSON polygon ring must be closed
+    geoJsonRing.push([boundary[0][1], boundary[0][0]]);
+  }
+
+  const boundaryPoints = boundary.map(([bLat, bLng]) => ({
+    latitude: Math.round(bLat * 1000000) / 1000000,
+    longitude: Math.round(bLng * 1000000) / 1000000,
+  }));
+
   return {
     id: farmId,
     ownerId: input.ownerId || 'farmer_punjab',
     name: input.name,
     location: input.location,
     area: input.area,
+    total_area: input.area,
+    mapped_area: measuredArea.acres,
+    number_of_zones: input.numberOfZones,
     latitude: lat,
     longitude: lng,
     boundary,
-    boundaryAreaAcres: input.area,
-    boundaryAreaHectares: Math.round((input.area / 2.47105) * 100) / 100,
-    boundaryPerimeterMeters: Math.round(sideM * 8),
-    boundaryShape: 'rectangle',
+    boundary_points: boundaryPoints,
+    boundaryGeoJson: {
+      type: 'Polygon',
+      coordinates: [geoJsonRing],
+    },
+    boundaryAreaAcres: measuredArea.acres,
+    boundaryAreaHectares: measuredArea.hectares,
+    boundaryPerimeterMeters: measuredPerimeter.meters,
+    boundaryShape: 'polygon',
     zones,
     createdAt: new Date().toISOString(),
   };

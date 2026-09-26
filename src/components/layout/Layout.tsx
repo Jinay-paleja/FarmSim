@@ -1,8 +1,11 @@
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
-import { Sprout, Home, Plus, BarChart3, GitCompare, Menu, X, ChevronDown, Check, MapPin, Tractor, User as UserIcon, LogOut, LogIn, Sparkles } from 'lucide-react';
+import {
+  Sprout, Home, Plus, BarChart3, GitCompare, Menu, X, ChevronDown, Check,
+  MapPin, Tractor, User as UserIcon, LogOut, LogIn, Sparkles, Compass, LineChart, Layers
+} from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { useFarmContext } from '../../context/FarmContext';
-import { useAuth, DEMO_FARMERS } from '../../context/AuthContext';
+import { useAuth } from '../../context/AuthContext';
 
 export default function Layout() {
   const location = useLocation();
@@ -13,8 +16,8 @@ export default function Layout() {
   const dropdownRef = useRef<HTMLDivElement>(null);
   const userDropdownRef = useRef<HTMLDivElement>(null);
 
-  const { user, farmerProfile, demoLogin, logout, isAuthenticated, availableDemoFarmers } = useAuth();
-  const { farms, selectedFarm, selectFarm, allFarms } = useFarmContext();
+  const { user, farmerProfile, logout, isAuthenticated } = useAuth();
+  const { farms, selectedFarm, selectFarm } = useFarmContext();
 
   // Extract farmId from URL if present
   const farmIdMatch = location.pathname.match(/\/farms\/([^/]+)/);
@@ -48,41 +51,45 @@ export default function Layout() {
     setUserDropdownOpen(false);
   }, [location.pathname]);
 
-  const activeFarmId = selectedFarm?.id || (farmId !== 'create' ? farmId : undefined);
+  const activeFarmId = selectedFarm?.id || (farmId && farmId !== 'create' ? farmId : undefined);
 
-  const navItems = [
-    { to: '/', icon: Home, label: 'Home' },
-    { to: '/farms/create', icon: Plus, label: 'New Farm' },
+  // Authenticated Navigation Items
+  const authNavItems = [
+    { to: '/dashboard', icon: BarChart3, label: 'Dashboard' },
+    { to: '/farms', icon: Tractor, label: 'My Farms' },
     ...(activeFarmId
       ? [
-          { to: `/farms/${activeFarmId}`, icon: BarChart3, label: 'Dashboard' },
-          { to: `/farms/${activeFarmId}/scenarios/new`, icon: Sprout, label: 'Scenarios' },
+          { to: `/farms/${activeFarmId}/builder`, icon: Layers, label: 'Farm Map' },
+          { to: `/farms/${activeFarmId}/scenarios/new`, icon: Sprout, label: 'Simulations' },
+          { to: `/farms/${activeFarmId}`, icon: LineChart, label: 'Analytics' },
           { to: `/farms/${activeFarmId}/compare`, icon: GitCompare, label: 'Compare' },
         ]
       : []),
   ];
 
-  const handleDemoSwitch = (farmerId: string) => {
-    demoLogin(farmerId);
+  // Public Navigation Items
+  const publicNavItems = [
+    { to: '/', icon: Home, label: 'Home' },
+    { to: '/#features', icon: Sparkles, label: 'Features' },
+    { to: '/#how-it-works', icon: Compass, label: 'How It Works' },
+  ];
+
+  const currentNavItems = isAuthenticated ? authNavItems : publicNavItems;
+
+  const handleLogout = () => {
+    logout();
     setUserDropdownOpen(false);
-    // Find first farm owned by this demo farmer
-    const farmerFarm = allFarms.find((f) => f.ownerId === farmerId);
-    if (farmerFarm) {
-      selectFarm(farmerFarm.id);
-      navigate(`/farms/${farmerFarm.id}`);
-    } else {
-      navigate('/');
-    }
+    navigate('/login');
   };
 
   return (
-    <div className="min-h-screen bg-stone-50">
+    <div className="min-h-screen bg-stone-50 flex flex-col">
       {/* Top Navigation */}
       <header className="bg-white border-b border-gray-200 sticky top-0 z-50 shadow-xs">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16 gap-4">
             <div className="flex items-center gap-4">
-              <Link to="/" className="flex items-center gap-2.5 group">
+              <Link to={isAuthenticated ? "/dashboard" : "/"} className="flex items-center gap-2.5 group">
                 <div className="w-9 h-9 rounded-xl bg-farm-green flex items-center justify-center shadow-md group-hover:scale-105 transition-transform">
                   <Sprout className="w-5 h-5 text-white" />
                 </div>
@@ -91,8 +98,8 @@ export default function Layout() {
                 </span>
               </Link>
 
-              {/* PROMINENT FARM SELECTOR DROPDOWN */}
-              {farms.length > 0 && (
+              {/* FARM SELECTOR DROPDOWN (ONLY AUTHENTICATED WITH FARMS) */}
+              {isAuthenticated && farms.length > 0 && (
                 <div className="relative" ref={dropdownRef}>
                   <button
                     type="button"
@@ -117,7 +124,7 @@ export default function Layout() {
                   {farmDropdownOpen && (
                     <div className="absolute top-full left-0 mt-1.5 w-72 bg-white rounded-2xl shadow-xl border border-gray-200 py-2 z-[999] animate-fadeIn">
                       <div className="px-3.5 py-1.5 text-[10px] font-bold uppercase tracking-wider text-gray-400 border-b border-gray-100">
-                        {user ? `${user.name}'s Farms` : 'Your Farms'} ({farms.length})
+                        {user?.name}'s Farms ({farms.length})
                       </div>
                       <div className="max-h-64 overflow-y-auto py-1">
                         {farms.map((f) => {
@@ -167,10 +174,10 @@ export default function Layout() {
               )}
             </div>
 
-            {/* Desktop Nav + Farmer Profile Badge */}
+            {/* Desktop Nav + Farmer Profile / Auth Buttons */}
             <div className="hidden md:flex items-center gap-3">
               <nav className="flex items-center gap-1">
-                {navItems.map((item) => {
+                {currentNavItems.map((item) => {
                   const Icon = item.icon;
                   const isActive = location.pathname === item.to;
                   return (
@@ -192,7 +199,7 @@ export default function Layout() {
 
               <div className="h-6 w-px bg-gray-200 mx-1" />
 
-              {/* FARMER ACCOUNT DROPDOWN */}
+              {/* AUTHENTICATED: FARMER ACCOUNT DROPDOWN */}
               {isAuthenticated && user ? (
                 <div className="relative" ref={userDropdownRef}>
                   <button
@@ -216,9 +223,9 @@ export default function Layout() {
 
                   {/* Dropdown Menu */}
                   {userDropdownOpen && (
-                    <div className="absolute top-full right-0 mt-1.5 w-72 bg-white rounded-2xl shadow-xl border border-gray-200 py-2 z-[999] animate-fadeIn">
-                      {/* Current Farmer Info */}
-                      <div className="px-4 py-2.5 border-b border-gray-100">
+                    <div className="absolute top-full right-0 mt-1.5 w-64 bg-white rounded-2xl shadow-xl border border-gray-200 py-2 z-[999] animate-fadeIn">
+                      {/* Farmer Info */}
+                      <div className="px-4 py-3 border-b border-gray-100">
                         <div className="flex items-center gap-2.5">
                           <div className="w-9 h-9 rounded-xl bg-farm-green-pale flex items-center justify-center text-lg">
                             {farmerProfile?.avatarEmoji || '🧑‍🌾'}
@@ -235,71 +242,64 @@ export default function Layout() {
                         </div>
                       </div>
 
-                      {/* 1-Click Demo Profiles */}
-                      {availableDemoFarmers.length > 0 && (
-                        <>
-                          <div className="px-3.5 py-1.5 text-[10px] font-bold uppercase tracking-wider text-gray-400">
-                            Switch Demo Farmer
-                          </div>
-                          <div className="space-y-0.5 px-2">
-                            {availableDemoFarmers.map((farmer) => {
-                              const isCurrent = user.id === farmer.id;
-                              return (
-                                <button
-                                  key={farmer.id}
-                                  type="button"
-                                  onClick={() => handleDemoSwitch(farmer.id)}
-                                  className={`w-full px-2.5 py-1.5 rounded-lg text-left text-xs flex items-center justify-between transition-colors cursor-pointer ${
-                                    isCurrent
-                                      ? 'bg-farm-green-pale text-farm-green font-bold'
-                                      : 'hover:bg-gray-50 text-gray-700'
-                                  }`}
-                                >
-                                  <div className="flex items-center gap-2 truncate">
-                                    <span>{farmer.avatarEmoji}</span>
-                                    <span className="truncate">{farmer.name}</span>
-                                  </div>
-                                  {isCurrent && <Check className="w-3.5 h-3.5 text-farm-green flex-shrink-0" />}
-                                </button>
-                              );
-                            })}
-                          </div>
-                        </>
-                      )}
-
-                      {/* Actions */}
-                      <div className="border-t border-gray-100 mt-2 pt-1.5 px-2 space-y-1">
+                      {/* Quick Links */}
+                      <div className="py-1 px-2 space-y-0.5">
                         <Link
-                          to="/login"
+                          to="/dashboard"
                           onClick={() => setUserDropdownOpen(false)}
-                          className="w-full flex items-center gap-2 px-2.5 py-1.5 text-xs text-gray-700 hover:bg-stone-50 rounded-lg transition-colors"
+                          className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-stone-50 rounded-xl transition-colors"
                         >
-                          <LogIn className="w-3.5 h-3.5 text-gray-400" />
-                          Sign in / Register Another Farmer
+                          <BarChart3 className="w-3.5 h-3.5 text-gray-400" />
+                          Dashboard Overview
                         </Link>
+                        <Link
+                          to="/farms"
+                          onClick={() => setUserDropdownOpen(false)}
+                          className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-stone-50 rounded-xl transition-colors"
+                        >
+                          <Tractor className="w-3.5 h-3.5 text-gray-400" />
+                          My Farms ({farms.length})
+                        </Link>
+                        <Link
+                          to="/farms/create"
+                          onClick={() => setUserDropdownOpen(false)}
+                          className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-bold text-farm-green hover:bg-farm-green-pale/50 rounded-xl transition-colors"
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                          Create New Farm
+                        </Link>
+                      </div>
+
+                      {/* Logout Action */}
+                      <div className="border-t border-gray-100 mt-1 pt-1 px-2">
                         <button
                           type="button"
-                          onClick={() => {
-                            logout();
-                            setUserDropdownOpen(false);
-                            navigate('/login');
-                          }}
-                          className="w-full flex items-center gap-2 px-2.5 py-1.5 text-xs text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
+                          onClick={handleLogout}
+                          className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-bold text-red-600 hover:bg-red-50 rounded-xl transition-colors cursor-pointer"
                         >
                           <LogOut className="w-3.5 h-3.5" />
-                          Sign Out
+                          Log Out
                         </button>
                       </div>
                     </div>
                   )}
                 </div>
               ) : (
-                <Link
-                  to="/login"
-                  className="flex items-center gap-1.5 bg-farm-green hover:bg-farm-green-dark text-white px-3.5 py-2 rounded-xl text-xs font-bold shadow-xs transition-all"
-                >
-                  <LogIn className="w-3.5 h-3.5" /> Sign In
-                </Link>
+                /* UNAUTHENTICATED: LOGIN & SIGN UP BUTTONS */
+                <div className="flex items-center gap-2">
+                  <Link
+                    to="/login"
+                    className="text-xs font-bold text-gray-700 hover:text-farm-green px-3 py-2 rounded-xl transition-colors"
+                  >
+                    Sign In
+                  </Link>
+                  <Link
+                    to="/login?mode=signup"
+                    className="flex items-center gap-1.5 bg-farm-green hover:bg-farm-green-dark text-white px-3.5 py-2 rounded-xl text-xs font-bold shadow-xs transition-all"
+                  >
+                    <LogIn className="w-3.5 h-3.5" /> Get Started
+                  </Link>
+                </div>
               )}
             </div>
 
@@ -315,28 +315,28 @@ export default function Layout() {
 
         {/* Mobile Nav */}
         {mobileMenuOpen && (
-          <div className="md:hidden border-t border-gray-100 bg-white">
-            {/* Farmer badge on mobile */}
-            {user && (
-              <div className="p-3 mx-4 my-2 rounded-xl bg-stone-50 border border-gray-200 flex items-center justify-between">
+          <div className="md:hidden border-t border-gray-100 bg-white p-4 space-y-2">
+            {isAuthenticated && user && (
+              <div className="p-3 mb-2 rounded-xl bg-stone-50 border border-gray-200 flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
                   <div className="text-xl">{farmerProfile?.avatarEmoji || '🧑‍🌾'}</div>
                   <div>
                     <div className="text-xs font-bold text-gray-900">{user.name}</div>
-                    <div className="text-[10px] text-gray-500">{farms.length} farm{farms.length !== 1 ? 's' : ''} • {user.location}</div>
+                    <div className="text-[10px] text-gray-500">{farms.length} farm{farms.length !== 1 ? 's' : ''}</div>
                   </div>
                 </div>
-                <Link
-                  to="/login"
-                  className="text-xs text-farm-green font-bold hover:underline"
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  className="text-xs text-red-600 font-bold hover:underline"
                 >
-                  Switch
-                </Link>
+                  Log Out
+                </button>
               </div>
             )}
 
-            <div className="px-4 py-2 space-y-1">
-              {navItems.map((item) => {
+            <div className="space-y-1">
+              {currentNavItems.map((item) => {
                 const Icon = item.icon;
                 const isActive = location.pathname === item.to;
                 return (
@@ -345,7 +345,7 @@ export default function Layout() {
                     to={item.to}
                     className={`flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-all ${
                       isActive
-                        ? 'bg-farm-green-pale text-farm-green'
+                        ? 'bg-farm-green-pale text-farm-green font-bold'
                         : 'text-gray-600 hover:bg-gray-50'
                     }`}
                   >
@@ -354,13 +354,22 @@ export default function Layout() {
                   </Link>
                 );
               })}
-              {!user && (
-                <Link
-                  to="/login"
-                  className="flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-bold text-farm-green bg-farm-green-pale/50"
-                >
-                  <LogIn className="w-4 h-4" /> Sign In / Register
-                </Link>
+
+              {!isAuthenticated && (
+                <div className="pt-2 border-t border-gray-100 space-y-2">
+                  <Link
+                    to="/login"
+                    className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold text-gray-700 bg-stone-100"
+                  >
+                    <LogIn className="w-4 h-4" /> Sign In
+                  </Link>
+                  <Link
+                    to="/login?mode=signup"
+                    className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold text-white bg-farm-green"
+                  >
+                    <Sparkles className="w-4 h-4" /> Get Started Free
+                  </Link>
+                </div>
               )}
             </div>
           </div>

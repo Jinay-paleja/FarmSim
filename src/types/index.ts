@@ -32,6 +32,14 @@ export interface Farm {
   latitude?: number;
   longitude?: number;
   boundary?: [number, number][]; // [lat, lng] coordinates of farm boundary polygon
+  boundary_points?: { latitude: number; longitude: number }[];
+  boundaryGeoJson?: {
+    type: 'Polygon';
+    coordinates: [number, number][][]; // [longitude, latitude] GeoJSON format
+  };
+  mapped_area?: number;
+  total_area?: number;
+  number_of_zones?: number;
   boundaryAreaAcres?: number;
   boundaryAreaHectares?: number;
   boundaryPerimeterMeters?: number;
@@ -254,6 +262,14 @@ export interface FarmCreateInput {
   longitude?: number;
   numberOfZones: number;
   ownerId?: string;
+  boundary?: [number, number][]; // [lat, lng] array
+  boundary_points?: { latitude: number; longitude: number }[];
+  boundaryGeoJson?: {
+    type: 'Polygon';
+    coordinates: [number, number][][]; // [longitude, latitude] GeoJSON format
+  };
+  mapped_area?: number;
+  total_area?: number;
 }
 
 export interface ZoneInput {
