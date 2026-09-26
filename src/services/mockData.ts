@@ -16,85 +16,136 @@ export function isMockEnabled(): boolean {
 
 export function createMockFarm(input: { name: string; location: string; area: number; numberOfZones: number; latitude?: number; longitude?: number }): Farm {
   const farmId = `farm_${Date.now()}`;
-  const zones: Zone[] = Array.from({ length: input.numberOfZones }, (_, i) => ({
-    id: `zone_${farmId}_${i + 1}`,
-    farmId,
-    name: `Zone ${i + 1}`,
-    area: Math.round((input.area / input.numberOfZones) * 10) / 10,
-    crop: (['Rice', 'Wheat', 'Maize', 'Soybean', 'Cotton'] as CropType[])[i % 5],
-    soilType: (['Alluvial', 'Black', 'Red'] as SoilType[])[i % 3],
-    growthStage: 'Vegetative' as const,
-    irrigationMethod: 'Drip' as const,
-    soilMoisture: 55 + Math.random() * 20,
-    temperature: 25 + Math.random() * 10,
-    humidity: 60 + Math.random() * 20,
-    rainfall: 50 + Math.random() * 100,
-    nitrogen: 30 + Math.random() * 40,
-    phosphorus: 15 + Math.random() * 25,
-    potassium: 20 + Math.random() * 30,
-    healthScore: 60 + Math.random() * 35,
-    diseaseRisk: Math.random() * 40,
-  }));
+  
+  // Choose sensible center coordinates if not specified
+  let lat = input.latitude;
+  let lng = input.longitude;
+  if (!lat || !lng) {
+    const loc = (input.location || '').toLowerCase();
+    if (loc.includes('punjab') || loc.includes('india')) {
+      lat = 30.9010; lng = 75.8573;
+    } else if (loc.includes('california') || loc.includes('fresno')) {
+      lat = 36.7468; lng = -119.7726;
+    } else if (loc.includes('iowa')) {
+      lat = 42.0308; lng = -93.6319;
+    } else {
+      lat = 30.9010; lng = 75.8573;
+    }
+  }
+
+  // Generate boundary polygon around center
+  const center: [number, number] = [lat, lng];
+  const sideM = Math.sqrt(input.area * 4046.86) / 2;
+  const dLat = sideM / 111320;
+  const dLng = sideM / (111320 * Math.cos((lat * Math.PI) / 180));
+
+  const boundary: [number, number][] = [
+    [lat + dLat, lng - dLng],
+    [lat + dLat, lng + dLng],
+    [lat - dLat, lng + dLng],
+    [lat - dLat, lng - dLng],
+  ];
+
+  // Generate initial sub-plots
+  const count = input.numberOfZones;
+  const cols = Math.ceil(Math.sqrt(count));
+  const rows = Math.ceil(count / cols);
+  const colW = (dLng * 1.8) / cols;
+  const rowH = (dLat * 1.8) / rows;
+  const minLt = lat - dLat * 0.9;
+  const maxLt = lat + dLat * 0.9;
+  const minLg = lng - dLng * 0.9;
+
+  const zones: Zone[] = Array.from({ length: count }, (_, i) => {
+    const r = Math.floor(i / cols);
+    const c = i % cols;
+    const pMaxLat = maxLt - r * rowH - rowH * 0.05;
+    const pMinLat = maxLt - (r + 1) * rowH + rowH * 0.05;
+    const pMinLng = minLg + c * colW + colW * 0.05;
+    const pMaxLng = minLg + (c + 1) * colW - colW * 0.05;
+
+    const plotPoly: [number, number][] = [
+      [pMaxLat, pMinLng],
+      [pMaxLat, pMaxLng],
+      [pMinLat, pMaxLng],
+      [pMinLat, pMinLng],
+    ];
+
+    const health = 65 + Math.random() * 30;
+    const moisture = 50 + Math.random() * 25;
+    const disease = Math.random() * 30;
+
+    return {
+      id: `zone_${farmId}_${i + 1}`,
+      farmId,
+      name: `Field ${String.fromCharCode(65 + i)}1`,
+      area: Math.round((input.area / input.numberOfZones) * 10) / 10,
+      crop: (['Rice', 'Wheat', 'Maize', 'Soybean', 'Cotton'] as CropType[])[i % 5],
+      soilType: (['Loamy', 'Alluvial', 'Black', 'Red'] as SoilType[])[i % 4],
+      growthStage: 'Vegetative' as const,
+      irrigationMethod: 'Drip' as const,
+      soilMoisture: moisture,
+      temperature: 26 + Math.random() * 6,
+      humidity: 58 + Math.random() * 20,
+      rainfall: 60 + Math.random() * 60,
+      nitrogen: 35 + Math.random() * 30,
+      phosphorus: 18 + Math.random() * 20,
+      potassium: 22 + Math.random() * 25,
+      healthScore: health,
+      diseaseRisk: disease,
+      pestRisk: Math.random() * 25,
+      boundary: plotPoly,
+      boundaryShape: 'polygon',
+      stressState: health > 80 ? 'healthy' : health > 60 ? 'moderate_stress' : 'high_stress',
+    };
+  });
 
   return {
     id: farmId,
     name: input.name,
     location: input.location,
     area: input.area,
-    latitude: input.latitude,
-    longitude: input.longitude,
+    latitude: lat,
+    longitude: lng,
+    boundary,
+    boundaryAreaAcres: input.area,
+    boundaryAreaHectares: Math.round((input.area / 2.47105) * 100) / 100,
+    boundaryPerimeterMeters: Math.round(sideM * 8),
+    boundaryShape: 'rectangle',
     zones,
     createdAt: new Date().toISOString(),
   };
 }
 
-export function createMockSimulation(farmId: string, scenarioName: string): SimulationResult {
-  const days = [1, 7, 15, 30, 45, 60, 75, 90];
-  let moisture = 65;
-  let health = 85;
-  let disease = 10;
-  let water = 100;
-  let yield_ = 90;
+import { runComprehensiveSimulation } from './simulationEngine';
+import type { WeatherMode, WeatherModifiers, StructuredScenarioJSON } from '../types';
 
-  const timeline = days.map((day) => {
-    moisture += (Math.random() - 0.55) * 5;
-    health += (Math.random() - 0.5) * 4;
-    disease += (Math.random() - 0.3) * 3;
-    water += (Math.random() - 0.4) * 10;
-    yield_ += (Math.random() - 0.5) * 3;
-
-    moisture = Math.max(10, Math.min(100, moisture));
-    health = Math.max(0, Math.min(100, health));
-    disease = Math.max(0, Math.min(100, disease));
-    water = Math.max(0, water);
-    yield_ = Math.max(0, Math.min(100, yield_));
-
-    return {
-      day,
-      label: `Day ${day}`,
-      soilMoisture: Math.round(moisture * 10) / 10,
-      cropHealth: Math.round(health * 10) / 10,
-      diseaseRisk: Math.round(disease * 10) / 10,
-      waterConsumption: Math.round(water * 10) / 10,
-      expectedYield: Math.round(yield_ * 10) / 10,
-    };
-  });
-
-  return {
-    id: `sim_${Date.now()}`,
+export function createMockSimulation(
+  farmId: string,
+  scenarioName?: string,
+  weather?: any,
+  zones?: Zone[],
+  mode?: WeatherMode,
+  weatherModifiers?: WeatherModifiers,
+  durationDays?: number,
+  structuredScenario?: StructuredScenarioJSON
+): SimulationResult {
+  return runComprehensiveSimulation({
     farmId,
-    scenarioName: scenarioName || 'Baseline',
-    timeline,
-    summary: {
-      totalWaterUsage: Math.round(water * days.length),
-      averageCropHealth: Math.round(health * 10) / 10,
-      averageDiseaseRisk: Math.round(disease * 10) / 10,
-      totalExpectedYield: Math.round(yield_ * 100) / 10,
-      averageSoilMoisture: Math.round(moisture * 10) / 10,
-    },
-    aiExplanation: `Based on the "${scenarioName || 'Baseline'}" scenario analysis: The simulation projects soil moisture trending ${moisture > 60 ? 'stable' : 'downward'} over the 90-day period. Crop health is expected to ${health > 70 ? 'remain robust' : 'face moderate stress'}, with disease risk at ${disease > 30 ? 'elevated' : 'manageable'} levels. Water consumption patterns suggest ${water > 120 ? 'above-average' : 'moderate'} irrigation needs. Expected yield projections indicate a ${yield_ > 80 ? 'strong' : yield_ > 60 ? 'moderate' : 'reduced'} harvest potential. Consider adjusting irrigation schedules and monitoring soil nutrient levels for optimal outcomes.`,
-    createdAt: new Date().toISOString(),
-  };
+    scenarioName: scenarioName || (structuredScenario ? `${structuredScenario.scenario_type} Scenario` : 'Simulation'),
+    weather,
+    zones: zones || [],
+    mode: mode || (structuredScenario ? 'what_if' : scenarioName && /drought|heatwave|flood|rain/i.test(scenarioName) ? 'what_if' : 'real_weather'),
+    weatherModifiers: weatherModifiers || (
+      scenarioName && /drought/i.test(scenarioName)
+        ? { preset: 'drought', tempDelta: 3.5, rainMultiplier: 0.1 }
+        : scenarioName && /heatwave/i.test(scenarioName)
+        ? { preset: 'heatwave', tempDelta: 6.0, rainMultiplier: 0.4 }
+        : { tempDelta: 0, rainMultiplier: 1.0 }
+    ),
+    durationDays: durationDays || structuredScenario?.duration_days || 14,
+    structuredScenario,
+  });
 }
 
 export function createMockComparison(simulations: SimulationResult[]): ComparisonResult {
@@ -125,3 +176,75 @@ export function createMockComparison(simulations: SimulationResult[]): Compariso
     aiExplanation: `Comparing ${simulations.length} scenarios reveals significant differences in expected outcomes. ${simulations.length >= 2 ? `The "${simulations[0].scenarioName}" scenario shows ${simulations[0].summary.averageCropHealth > simulations[1].summary.averageCropHealth ? 'higher' : 'lower'} crop health compared to "${simulations[1].scenarioName}".` : ''} Water usage varies across scenarios, suggesting opportunities for optimization. Disease risk patterns differ based on environmental conditions, with proactive management recommended for higher-risk scenarios.`,
   };
 }
+
+/**
+ * Ensures default realistic multi-farm portfolio exists in storage:
+ * Farm 1: Green Valley Farm (12.4 acres, Punjab)
+ * Farm 2: Sunrise Farm (8.7 acres, California)
+ * Farm 3: River Farm (21.2 acres, Iowa)
+ */
+export function ensureDefaultFarms(): Farm[] {
+  let stored: Farm[] = [];
+  try {
+    stored = JSON.parse(localStorage.getItem('farms') || '[]');
+  } catch {
+    stored = [];
+  }
+
+  const defaultSpecs = [
+    {
+      id: 'farm_green_valley',
+      name: 'Green Valley Farm',
+      location: 'Ludhiana, Punjab',
+      area: 12.4,
+      numberOfZones: 5,
+      latitude: 30.9010,
+      longitude: 75.8573,
+    },
+    {
+      id: 'farm_sunrise',
+      name: 'Sunrise Farm',
+      location: 'Fresno, California',
+      area: 8.7,
+      numberOfZones: 3,
+      latitude: 36.7468,
+      longitude: -119.7726,
+    },
+    {
+      id: 'farm_river',
+      name: 'River Farm',
+      location: 'Ames, Iowa',
+      area: 21.2,
+      numberOfZones: 4,
+      latitude: 42.0308,
+      longitude: -93.6319,
+    },
+  ];
+
+  if (stored.length < 3) {
+    const seededFarms = defaultSpecs.map((spec) => {
+      const existing = stored.find((f) => f.id === spec.id || f.name === spec.name);
+      if (existing) return existing;
+      const created = createMockFarm({
+        name: spec.name,
+        location: spec.location,
+        area: spec.area,
+        numberOfZones: spec.numberOfZones,
+        latitude: spec.latitude,
+        longitude: spec.longitude,
+      });
+      created.id = spec.id;
+      return created;
+    });
+
+    const merged = [
+      ...seededFarms,
+      ...stored.filter((f) => !seededFarms.some((sf) => sf.id === f.id)),
+    ];
+    localStorage.setItem('farms', JSON.stringify(merged));
+    return merged;
+  }
+
+  return stored;
+}
+

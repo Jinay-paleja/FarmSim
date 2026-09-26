@@ -2,6 +2,16 @@
 // Core Domain Types for FarmSim AI
 // ============================================================
 
+export type FieldStressState =
+  | 'healthy'
+  | 'moderate_stress'
+  | 'high_stress'
+  | 'severe_stress'
+  | 'flooded'
+  | 'drought'
+  | 'heat_stress'
+  | 'disease';
+
 export interface Farm {
   id: string;
   name: string;
@@ -9,6 +19,11 @@ export interface Farm {
   area: number; // in acres
   latitude?: number;
   longitude?: number;
+  boundary?: [number, number][]; // [lat, lng] coordinates of farm boundary polygon
+  boundaryAreaAcres?: number;
+  boundaryAreaHectares?: number;
+  boundaryPerimeterMeters?: number;
+  boundaryShape?: 'polygon' | 'rectangle' | 'circle';
   zones: Zone[];
   createdAt?: string;
   updatedAt?: string;
@@ -32,6 +47,10 @@ export interface Zone {
   potassium: number;
   healthScore?: number;
   diseaseRisk?: number;
+  pestRisk?: number;
+  boundary?: [number, number][]; // [lat, lng] coordinates of field polygon
+  boundaryShape?: 'polygon' | 'rectangle' | 'circle';
+  stressState?: FieldStressState;
 }
 
 export type CropType =
@@ -40,7 +59,8 @@ export type CropType =
   | 'Groundnut' | 'Mustard' | 'Cotton' | 'Sugarcane' | 'Potato';
 
 export type SoilType =
-  | 'Alluvial' | 'Black' | 'Red' | 'Laterite' | 'Arid' | 'Forest/Mountain';
+  | 'Alluvial' | 'Black' | 'Red' | 'Laterite' | 'Arid' | 'Forest/Mountain'
+  | 'Loamy' | 'Clay' | 'Sandy' | 'Silty';
 
 export type GrowthStage =
   | 'Germination' | 'Seedling' | 'Vegetative' | 'Flowering'
@@ -79,11 +99,35 @@ export type ScenarioChangeType =
   | 'pest_outbreak'
   | 'combined';
 
+export type WeatherMode = 'real_weather' | 'what_if';
+
+export type WhatIfWeatherPreset =
+  | 'drought'
+  | 'heatwave'
+  | 'flood'
+  | 'heavy_rain'
+  | 'extreme_heat'
+  | 'low_rainfall'
+  | 'custom';
+
+export interface WeatherModifiers {
+  preset?: WhatIfWeatherPreset;
+  tempDelta: number; // e.g. +5°C
+  rainMultiplier: number; // e.g. 0.2 (80% decrease) or 2.5 (150% increase)
+  rainDeltaMm?: number;
+  irrigationFailure?: boolean;
+  heatwaveActive?: boolean;
+}
+
 export interface SimulationRequest {
   farmId: string;
   scenarioId?: string;
   zones: Zone[];
   scenario?: Scenario;
+  mode?: WeatherMode;
+  weatherModifiers?: WeatherModifiers;
+  durationDays?: number;
+  structuredScenario?: StructuredScenarioJSON;
 }
 
 export interface SimulationResult {
@@ -91,8 +135,18 @@ export interface SimulationResult {
   farmId: string;
   scenarioId?: string;
   scenarioName?: string;
+  mode?: WeatherMode;
+  weatherModifiers?: WeatherModifiers;
   timeline: TimelinePoint[];
   summary: SimulationSummary;
+  baselineSummary?: SimulationSummary;
+  comparisonDiff?: {
+    cropHealthDiff: number;
+    soilMoistureDiff: number;
+    yieldDiff: number;
+    waterUsageDiff: number;
+  };
+  decisionSupportNote?: string;
   aiExplanation: string;
   createdAt?: string;
 }
@@ -105,17 +159,34 @@ export interface TimelinePoint {
   diseaseRisk: number;
   waterConsumption: number;
   expectedYield: number;
+  // Weather & Agronomic variables
+  temperature?: number;
+  rainfall?: number;
+  baselineTemperature?: number;
+  baselineRainfall?: number;
+  waterStress?: number; // 0-100
+  heatStress?: number; // 0-100
+  pestRisk?: number; // 0-100
+  yieldPotential?: number; // 0-100
+  weatherCondition?: 'normal' | 'drought' | 'heatwave' | 'flood' | 'rain';
   zones?: ZoneTimeline[];
 }
 
 export interface ZoneTimeline {
   zoneId: string;
   zoneName: string;
+  crop?: string;
+  soil?: string;
   soilMoisture: number;
   cropHealth: number;
   diseaseRisk: number;
+  pestRisk?: number;
   waterConsumption: number;
   expectedYield: number;
+  waterStress?: number;
+  heatStress?: number;
+  yieldPotential?: number;
+  stressState?: FieldStressState;
 }
 
 export interface SimulationSummary {
@@ -124,6 +195,9 @@ export interface SimulationSummary {
   averageDiseaseRisk: number;
   totalExpectedYield: number;
   averageSoilMoisture: number;
+  averageWaterStress?: number;
+  averageHeatStress?: number;
+  averageYieldPotential?: number;
 }
 
 export interface ComparisonRequest {
@@ -170,6 +244,7 @@ export interface FarmCreateInput {
 }
 
 export interface ZoneInput {
+  id?: string;
   name: string;
   area: number;
   crop: CropType;
@@ -183,6 +258,12 @@ export interface ZoneInput {
   nitrogen: number;
   phosphorus: number;
   potassium: number;
+  healthScore?: number;
+  diseaseRisk?: number;
+  pestRisk?: number;
+  boundary?: [number, number][];
+  boundaryShape?: 'polygon' | 'rectangle' | 'circle';
+  stressState?: FieldStressState;
 }
 
 // ============================================================
@@ -209,6 +290,7 @@ export const CROP_OPTIONS: CropType[] = [
 
 export const SOIL_OPTIONS: SoilType[] = [
   'Alluvial', 'Black', 'Red', 'Laterite', 'Arid', 'Forest/Mountain',
+  'Loamy', 'Clay', 'Sandy', 'Silty',
 ];
 
 export const GROWTH_STAGES: GrowthStage[] = [
@@ -283,4 +365,110 @@ export const SOIL_COLORS: Record<SoilType, string> = {
   Laterite: '#E74C3C',
   Arid: '#F0E68C',
   'Forest/Mountain': '#556B2F',
+  Loamy: '#8D6E63',
+  Clay: '#BCAAA4',
+  Sandy: '#FFE082',
+  Silty: '#A1887F',
 };
+
+// Re-export Weather Domain Types
+export type {
+  WeatherData,
+  HourlyForecastPoint,
+  DailyForecastPoint,
+  WeatherAlert,
+  WeatherAgronomicImpact,
+} from '../services/weather';
+
+// ============================================================
+// Person 3: Complete AI Architecture Types
+// ============================================================
+
+export type RiskLevel = 'LOW' | 'MEDIUM' | 'HIGH';
+
+export interface RiskPrediction {
+  level: RiskLevel;
+  probability: { low: number; medium: number; high: number };
+  score: number; // 0 - 100
+  contributingFactors: { feature: string; impact: number; description: string }[];
+}
+
+export interface FarmRiskAssessmentRF {
+  waterStress: RiskPrediction;
+  heatStress: RiskPrediction;
+  diseaseRisk: RiskPrediction;
+  nutrientRisk: RiskPrediction;
+  overallScore: number;
+  timestamp: string;
+}
+
+export interface SuggestedQuickTest {
+  id: string;
+  title: string;
+  description: string;
+  scenarioType: ScenarioType;
+  durationDays: number;
+  triggerRisk: 'WATER_STRESS' | 'HEAT_STRESS' | 'DISEASE_RISK' | 'NUTRIENT_RISK';
+  changes: ScenarioChangesPayload;
+}
+
+export type ScenarioType =
+  | 'RAIN_REDUCTION'
+  | 'RAIN_INCREASE'
+  | 'TEMPERATURE_INCREASE'
+  | 'HEATWAVE'
+  | 'IRRIGATION_DECREASE'
+  | 'IRRIGATION_INCREASE'
+  | 'IRRIGATION_FAILURE'
+  | 'FERTILIZER_CHANGES'
+  | 'NITROGEN_DEFICIENCY'
+  | 'DISEASE_OUTBREAK'
+  | 'PEST_OUTBREAK'
+  | 'COMBINED';
+
+export interface ScenarioChangesPayload {
+  rainfall_multiplier?: number;
+  rainfall_delta_mm?: number;
+  temperature_delta?: number;
+  irrigation_multiplier?: number;
+  irrigation_failure?: boolean;
+  nitrogen_multiplier?: number;
+  nitrogen_delta?: number;
+  disease_pressure_delta?: number;
+  pest_pressure_delta?: number;
+}
+
+export interface StructuredScenarioJSON {
+  scenario_type: ScenarioType;
+  duration_days: number;
+  target_zones: string[];
+  changes: ScenarioChangesPayload;
+}
+
+export interface MetricDelta {
+  metric: string;
+  label: string;
+  unit: string;
+  baselineValue: number;
+  scenarioValue: number;
+  absoluteChange: number;
+  percentageChange: number;
+  direction: 'INCREASED' | 'DECREASED' | 'UNCHANGED';
+  impactSeverity: 'LOW' | 'MODERATE' | 'SEVERE';
+  isFavorable: boolean;
+}
+
+export interface TradeOffItem {
+  positiveAspect: string;
+  negativeAspect: string;
+  description: string;
+}
+
+export interface FarmerExplanation {
+  summary: string;
+  impactSeverity: 'LOW' | 'MODERATE' | 'SEVERE';
+  importantChanges: string[];
+  tradeOffs: TradeOffItem[];
+  recommendations: string[];
+  metricDeltas: MetricDelta[];
+}

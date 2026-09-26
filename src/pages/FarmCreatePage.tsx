@@ -1,13 +1,15 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MapPin, Ruler, Grid3x3, Sprout, ArrowRight, Loader2 } from 'lucide-react';
+import { MapPin, Ruler, Grid3x3, Sprout, ArrowRight, Loader2, Sparkles } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { farmApi } from '../services/api';
 import { isMockEnabled, createMockFarm } from '../services/mockData';
+import { useFarmContext } from '../context/FarmContext';
 import type { FarmCreateInput, Farm } from '../types';
 
 export default function FarmCreatePage() {
   const navigate = useNavigate();
+  const { refreshFarms, selectFarm } = useFarmContext();
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState<FarmCreateInput>({
     name: '',
@@ -57,7 +59,9 @@ export default function FarmCreatePage() {
           throw new Error('Failed to create farm');
         }
       }
-      toast.success('Farm created successfully!');
+      await refreshFarms();
+      selectFarm(farm.id);
+      toast.success('Farm created successfully! Opening Farm Map Builder...');
       navigate(`/farms/${farm.id}/builder`);
     } catch (err: any) {
       toast.error(err?.message || 'Failed to create farm');
@@ -123,6 +127,30 @@ export default function FarmCreatePage() {
                   />
                 </div>
                 {errors.location && <p className="text-sm text-red-500 mt-1">{errors.location}</p>}
+
+                {/* Location Quick Presets */}
+                <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                  <span className="text-xs text-gray-400 font-medium mr-1">Quick Select:</span>
+                  {[
+                    { name: 'Ludhiana, Punjab', lat: 30.9010, lng: 75.8573 },
+                    { name: 'Fresno, California', lat: 36.7468, lng: -119.7726 },
+                    { name: 'Ames, Iowa', lat: 42.0308, lng: -93.6319 },
+                    { name: 'Austin, Texas', lat: 30.2672, lng: -97.7431 },
+                  ].map((preset) => (
+                    <button
+                      key={preset.name}
+                      type="button"
+                      onClick={() => {
+                        updateField('location', preset.name);
+                        updateField('latitude', preset.lat);
+                        updateField('longitude', preset.lng);
+                      }}
+                      className="text-xs px-2.5 py-1 rounded-lg bg-stone-100 hover:bg-emerald-50 hover:text-farm-green text-gray-600 transition-colors border border-gray-200"
+                    >
+                      {preset.name}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
           </div>

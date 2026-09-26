@@ -2,39 +2,13 @@ import { Link, useNavigate } from 'react-router-dom';
 import {
   Sprout, ArrowRight, Cloud, Droplets, Sun, BarChart3,
   Wheat, Leaf, LineChart, FlaskConical, Zap, ShieldCheck,
+  Compass, MapPin, Layers
 } from 'lucide-react';
-import { useEffect, useState } from 'react';
-import { farmApi } from '../services/api';
-import { isMockEnabled } from '../services/mockData';
-import type { Farm } from '../types';
+import { useFarmContext } from '../context/FarmContext';
 
 export default function LandingPage() {
   const navigate = useNavigate();
-  const [farms, setFarms] = useState<Farm[]>([]);
-  const [loadingFarms, setLoadingFarms] = useState(true);
-
-  useEffect(() => {
-    loadFarms();
-  }, []);
-
-  const loadFarms = async () => {
-    try {
-      const data = await farmApi.list();
-      setFarms(data);
-    } catch {
-      // Check localStorage for mock farms
-      if (isMockEnabled()) {
-        const stored = localStorage.getItem('farms');
-        if (stored) {
-          try {
-            setFarms(JSON.parse(stored));
-          } catch { /* ignore */ }
-        }
-      }
-    } finally {
-      setLoadingFarms(false);
-    }
-  };
+  const { farms, loadingFarms, selectFarm } = useFarmContext();
 
   const features = [
     {
@@ -106,15 +80,13 @@ export default function LandingPage() {
                 <ArrowRight className="w-5 h-5" />
               </Link>
 
-              {farms.length > 0 && (
-                <button
-                  onClick={() => navigate(`/farms/${farms[0].id}`)}
-                  className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm border border-white/30 text-white font-semibold py-3.5 px-8 rounded-2xl hover:bg-white/20 transition-all duration-200"
-                >
-                  <BarChart3 className="w-5 h-5" />
-                  View Dashboard
-                </button>
-              )}
+              <a
+                href="#my-farms"
+                className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm border border-white/30 text-white font-semibold py-3.5 px-8 rounded-2xl hover:bg-white/20 transition-all duration-200"
+              >
+                <Compass className="w-5 h-5 text-yellow-300" />
+                My Farms ({farms.length})
+              </a>
             </div>
           </div>
         </div>
@@ -162,36 +134,95 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Existing Farms */}
-      {!loadingFarms && farms.length > 0 && (
-        <section className="py-16 bg-white">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <h2 className="text-2xl font-bold text-gray-900 mb-8">Your Farms</h2>
+      {/* MY FARMS PORTFOLIO */}
+      <section id="my-farms" className="py-20 bg-white border-t border-gray-100">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-10">
+            <div>
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-farm-green-pale text-farm-green text-xs font-bold uppercase tracking-wider mb-2">
+                <Compass className="w-3.5 h-3.5" /> Digital Twin Farm Management
+              </div>
+              <h2 className="text-3xl font-extrabold text-gray-900">My Farms</h2>
+              <p className="text-gray-500 text-sm mt-1">
+                Select an active farm to launch its interactive digital twin, view live weather, and run predictive crop simulations.
+              </p>
+            </div>
+            <Link
+              to="/farms/create"
+              className="inline-flex items-center gap-2 btn-primary shadow-md text-sm"
+            >
+              <Sprout className="w-4 h-4" />
+              + Add New Farm
+            </Link>
+          </div>
+
+          {!loadingFarms && farms.length > 0 ? (
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {farms.map((farm) => (
-                <Link
+                <div
                   key={farm.id}
-                  to={`/farms/${farm.id}`}
-                  className="card group hover:border-farm-green/30"
+                  onClick={() => {
+                    selectFarm(farm.id);
+                    navigate(`/farms/${farm.id}`);
+                  }}
+                  className="card group hover:border-farm-green hover:shadow-xl transition-all duration-200 cursor-pointer border border-gray-200 flex flex-col justify-between"
                 >
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="w-10 h-10 rounded-xl bg-farm-green-pale flex items-center justify-center">
-                      <Sprout className="w-5 h-5 text-farm-green" />
+                  <div>
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="w-12 h-12 rounded-2xl bg-farm-green-pale flex items-center justify-center text-xl shadow-xs group-hover:scale-105 transition-transform">
+                        🌾
+                      </div>
+                      <span className="text-xs font-bold text-farm-green bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-full flex items-center gap-1 group-hover:bg-farm-green group-hover:text-white transition-colors">
+                        Select Farm <ArrowRight className="w-3 h-3" />
+                      </span>
                     </div>
-                    <ArrowRight className="w-4 h-4 text-gray-300 group-hover:text-farm-green transition-colors" />
+
+                    <h3 className="font-bold text-lg text-gray-900 group-hover:text-farm-green transition-colors">
+                      {farm.name}
+                    </h3>
+                    <p className="text-sm text-gray-500 flex items-center gap-1.5 mt-1">
+                      <MapPin className="w-3.5 h-3.5 text-gray-400" />
+                      {farm.location}
+                    </p>
+
+                    <div className="grid grid-cols-2 gap-2 mt-4 pt-4 border-t border-gray-100 text-xs">
+                      <div className="bg-stone-50 p-2.5 rounded-xl">
+                        <span className="text-gray-400 block font-medium">Total Area</span>
+                        <span className="font-extrabold text-gray-800 text-sm">{farm.area} acres</span>
+                      </div>
+                      <div className="bg-stone-50 p-2.5 rounded-xl">
+                        <span className="text-gray-400 block font-medium">Fields</span>
+                        <span className="font-extrabold text-gray-800 text-sm">{farm.zones.length} plots</span>
+                      </div>
+                    </div>
                   </div>
-                  <h3 className="font-semibold text-gray-900">{farm.name}</h3>
-                  <p className="text-sm text-gray-500 mt-1">{farm.location}</p>
-                  <div className="flex items-center gap-4 mt-3 text-xs text-gray-400">
-                    <span>{farm.area} acres</span>
-                    <span>{farm.zones.length} zones</span>
+
+                  <div className="mt-4 pt-3 flex items-center justify-between text-xs text-gray-400 border-t border-gray-50">
+                    <span className="flex items-center gap-1">
+                      <Layers className="w-3.5 h-3.5 text-gray-400" />
+                      {farm.boundary ? 'Boundary mapped' : 'Boundary ready'}
+                    </span>
+                    <span className="font-semibold text-farm-green group-hover:underline">
+                      Open Dashboard & Map →
+                    </span>
                   </div>
-                </Link>
+                </div>
               ))}
             </div>
-          </div>
-        </section>
-      )}
+          ) : (
+            <div className="card text-center py-12">
+              <Sprout className="w-12 h-12 text-farm-green mx-auto mb-3 opacity-60" />
+              <h3 className="font-bold text-gray-800 text-lg">No farms created yet</h3>
+              <p className="text-gray-500 text-sm max-w-sm mx-auto mt-1 mb-6">
+                Create your first digital farm to map field plots, monitor meteorology, and forecast harvests.
+              </p>
+              <Link to="/farms/create" className="btn-primary inline-flex items-center gap-2">
+                Create Farm
+              </Link>
+            </div>
+          )}
+        </div>
+      </section>
 
       {/* Footer */}
       <footer className="bg-gray-900 text-gray-400 py-8">

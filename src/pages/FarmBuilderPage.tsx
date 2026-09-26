@@ -1,50 +1,124 @@
-import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useMemo } from 'react';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import {
-  Plus, Trash2, Save, ArrowRight, ChevronDown, ChevronUp,
-  Droplets, Thermometer, CloudRain, Leaf, FlaskConical,
-  Sprout, Settings2, Loader2,
+  MapPin, Save, Plus, ArrowRight, Layers, Eye,
+  Maximize2, Crosshair, AlertTriangle, Check, Undo2,
+  Trash2, Settings2, Loader2, Sprout, Wheat, Droplets,
+  Edit3, Compass, CheckCircle2, ChevronRight, HelpCircle, Brain,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { farmApi, zoneApi } from '../services/api';
-import { isMockEnabled, createMockFarm } from '../services/mockData';
+import { isMockEnabled } from '../services/mockData';
 import LoadingSpinner from '../components/shared/LoadingSpinner';
 import ErrorDisplay from '../components/shared/ErrorDisplay';
-import type {
-  Farm, Zone, ZoneInput, CropType, SoilType, GrowthStage, IrrigationMethod,
-} from '../types';
+import DigitalFarmMap, {
+  DrawingTool,
+  DrawingTarget,
+  BaseMapLayer,
+  FieldViewMode,
+} from '../components/map/DigitalFarmMap';
+import FieldDetailsPanel from '../components/map/FieldDetailsPanel';
+import WeatherCard from '../components/weather/WeatherCard';
+import FarmIntelligencePanel from '../components/intelligence/FarmIntelligencePanel';
+import { useFarmWeather } from '../hooks/useFarmWeather';
+import { useFarmContext } from '../context/FarmContext';
+import { analyzeFarmIntelligence } from '../services/farmIntelligence';
+import type { WeatherData } from '../services/weather';
+import type { Farm, Zone, ZoneInput, CropType, SoilType } from '../types';
 import {
   CROP_OPTIONS as cropOptions,
   SOIL_OPTIONS as soilOptions,
-  GROWTH_STAGES as growthStages,
-  IRRIGATION_METHODS as irrigationMethods,
   CROP_EMOJIS as cropEmojis,
   CROP_COLORS as cropColors,
-  SOIL_COLORS as soilColors,
 } from '../types';
+import {
+  calculatePolygonArea,
+  calculatePerimeter,
+  generateDefaultFarmBoundary,
+  generateDefaultPlotBoundaries,
+  getPolygonCenter,
+  doPolygonsOverlap,
+  isPolygonInsidePolygon,
+} from '../services/mapGeometry';
 
-const defaultZoneInput = (farmArea: number, zoneCount: number, index: number): ZoneInput => ({
-  name: `Zone ${index + 1}`,
-  area: Math.round((farmArea / Math.max(zoneCount, 1)) * 10) / 10,
-  crop: cropOptions[index % cropOptions.length],
-  soilType: soilOptions[index % soilOptions.length],
-  growthStage: 'Vegetative',
-  irrigationMethod: 'Drip',
-  soilMoisture: 60,
-  temperature: 28,
-  humidity: 65,
-  rainfall: 80,
-  nitrogen: 40,
-  phosphorus: 20,
-  potassium: 25,
-});
+function getInitialCoordinates(farm: Farm): [number, number] {
+  if (farm.latitude !== undefined && farm.longitude !== undefined && farm.latitude !== 0) {
+    return [farm.latitude, farm.longitude];
+  }
+  const loc = (farm.location || '').toLowerCase();
+  if (loc.includes('punjab') || loc.includes('ludhiana') || loc.includes('india')) {
+    return [30.9010, 75.8573];
+  }
+  if (loc.includes('california') || loc.includes('fresno') || loc.includes('central valley')) {
+    return [36.7468, -119.7726];
+  }
+  if (loc.includes('iowa') || loc.includes('ames')) {
+    return [42.0308, -93.6319];
+  }
+  if (loc.includes('texas')) {
+    return [31.9686, -99.9018];
+  }
+  if (loc.includes('kansas')) {
+    return [39.0119, -98.4842];
+  }
+  // Default fertile agriculture coordinates (Punjab plain)
+  return [30.9010, 75.8573];
+}
 
 export default function FarmBuilderPage() {
   const { farmId } = useParams<{ farmId: string }>();
   const navigate = useNavigate();
+  const { updateFarmInState, selectFarm } = useFarmContext();
+
   const [farm, setFarm] = useState<Farm | null>(null);
   const [zones, setZones] = useState<ZoneInput[]>([]);
-  const [expandedZone, setExpandedZone] = useState<number>(0);
+  const [selectedZoneIndex, setSelectedZoneIndex] = useState<number | null>(null);
+
+  // Map controls
+  const [mapCenter, setMapCenter] = useState<[number, number]>([30.9010, 75.8573]);
+  const [farmBoundary, setFarmBoundary] = useState<[number, number][] | undefined>(undefined);
+  const [drawingTool, setDrawingTool] = useState<DrawingTool>('none');
+  const [drawingTarget, setDrawingTarget] = useState<DrawingTarget>('field');
+  const [activeLayer, setActiveLayer] = useState<BaseMapLayer>('satellite');
+  const [viewMode, setViewMode] = useState<FieldViewMode>('health');
+  const [isEditingVertices, setIsEditingVertices] = useState(false);
+  const [validationWarning, setValidationWarning] = useState<string | null>(null);
+  const [sidebarTab, setSidebarTab] = useState<'plots' | 'intelligence'>('plots');
+  const [showWeatherOverlay, setShowWeatherOverlay] = useState(false);
+
+  // Live Weather Integration from Open-Meteo
+  const {
+    weather,
+    loading: weatherLoading,
+    isRefreshing: weatherRefreshing,
+    error: weatherError,
+    lastUpdatedLabel: weatherUpdatedLabel,
+    refresh: refreshWeather,
+    agronomicImpact,
+  } = useFarmWeather({
+    latitude: farm?.latitude ?? mapCenter[0],
+    longitude: farm?.longitude ?? mapCenter[1],
+    zones,
+  });
+
+  // Real-time Farm Intelligence Engine
+  const farmIntelligence = useMemo(() => {
+    if (!farm || !weather) return null;
+    return analyzeFarmIntelligence(farm, zones, weather);
+  }, [farm, zones, weather]);
+
+  const handleApplyWeatherToZones = (w: WeatherData) => {
+    setZones((prev) =>
+      prev.map((z) => ({
+        ...z,
+        temperature: w.temperature,
+        humidity: w.humidity,
+        rainfall: w.rain > 0 ? Math.round(w.rain * 15) : z.rainfall,
+      }))
+    );
+    toast.success(`Applied live weather (${Math.round(w.temperature)}°C, ${Math.round(w.humidity)}% humidity) to all plots!`);
+  };
+
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -73,8 +147,262 @@ export default function FarmBuilderPage() {
       }
       setFarm(farmData);
 
+      // Determine center
+      const centerCoords = getInitialCoordinates(farmData);
+      setMapCenter(centerCoords);
+
+      // Determine or generate farm boundary
+      let currentBoundary = farmData.boundary;
+      if (!currentBoundary || currentBoundary.length < 3) {
+        currentBoundary = generateDefaultFarmBoundary(centerCoords, farmData.area || 10);
+      }
+      setFarmBoundary(currentBoundary);
+
+      // Prepare zones with boundaries
+      let initialZones: ZoneInput[] = [];
       if (farmData.zones && farmData.zones.length > 0) {
-        setZones(farmData.zones.map((z) => ({
+        const defaultPlots = generateDefaultPlotBoundaries(currentBoundary, farmData.zones.length);
+        initialZones = farmData.zones.map((z, idx) => ({
+          id: z.id,
+          name: z.name || `Field ${idx + 1}`,
+          area: z.area,
+          crop: z.crop,
+          soilType: (z.soilType as SoilType) || 'Loamy',
+          growthStage: z.growthStage,
+          irrigationMethod: z.irrigationMethod,
+          soilMoisture: z.soilMoisture,
+          temperature: z.temperature,
+          humidity: z.humidity,
+          rainfall: z.rainfall,
+          nitrogen: z.nitrogen,
+          phosphorus: z.phosphorus,
+          potassium: z.potassium,
+          healthScore: z.healthScore ?? 80,
+          diseaseRisk: z.diseaseRisk ?? 15,
+          pestRisk: z.pestRisk ?? 15,
+          boundary: z.boundary && z.boundary.length >= 3 ? z.boundary : defaultPlots[idx],
+          boundaryShape: z.boundaryShape || 'polygon',
+          stressState: z.stressState || 'healthy',
+        }));
+      } else {
+        const count = 3;
+        const defaultPlots = generateDefaultPlotBoundaries(currentBoundary, count);
+        initialZones = Array.from({ length: count }, (_, idx) => ({
+          id: `zone_${farmData.id}_${idx + 1}`,
+          name: `Field ${String.fromCharCode(65 + idx)}1`,
+          area: Math.round(((farmData.area || 10) / count) * 10) / 10,
+          crop: cropOptions[idx % cropOptions.length],
+          soilType: 'Loamy',
+          growthStage: 'Vegetative',
+          irrigationMethod: 'Drip',
+          soilMoisture: 60,
+          temperature: 28,
+          humidity: 65,
+          rainfall: 80,
+          nitrogen: 42,
+          phosphorus: 20,
+          potassium: 26,
+          healthScore: 82,
+          diseaseRisk: 14,
+          pestRisk: 12,
+          boundary: defaultPlots[idx],
+          boundaryShape: 'polygon',
+          stressState: 'healthy',
+        }));
+      }
+      setZones(initialZones);
+      if (initialZones.length > 0) {
+        setSelectedZoneIndex(0);
+      }
+    } catch (err: any) {
+      setError(err?.message || 'Failed to load farm');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Immediate area & perimeter metrics for farm boundary
+  const farmAreaCalc = useMemo(() => {
+    if (farmBoundary && farmBoundary.length >= 3) {
+      return calculatePolygonArea(farmBoundary);
+    }
+    return {
+      acres: farm?.area || 0,
+      hectares: Math.round(((farm?.area || 0) / 2.47105) * 100) / 100,
+      squareMeters: Math.round((farm?.area || 0) * 4046.86),
+    };
+  }, [farmBoundary, farm?.area]);
+
+  const farmPerimeterCalc = useMemo(() => {
+    if (farmBoundary && farmBoundary.length >= 3) {
+      return calculatePerimeter(farmBoundary);
+    }
+    return { meters: 0, kilometers: 0, feet: 0 };
+  }, [farmBoundary]);
+
+  // Total allocated field acreage
+  const totalAllocatedAcres = useMemo(() => {
+    return Math.round(zones.reduce((sum, z) => sum + (z.area || 0), 0) * 100) / 100;
+  }, [zones]);
+
+  const remainingAcres = Math.round((farmAreaCalc.acres - totalAllocatedAcres) * 100) / 100;
+
+  // Handler: update farm boundary
+  const handleUpdateFarmBoundary = (coords: [number, number][], shape: 'polygon' | 'rectangle' | 'circle') => {
+    setFarmBoundary(coords);
+    const measured = calculatePolygonArea(coords);
+    const peri = calculatePerimeter(coords);
+
+    if (farm) {
+      setFarm({
+        ...farm,
+        area: measured.acres,
+        boundary: coords,
+        boundaryAreaAcres: measured.acres,
+        boundaryAreaHectares: measured.hectares,
+        boundaryPerimeterMeters: peri.meters,
+        boundaryShape: shape,
+      });
+    }
+
+    setDrawingTool('none');
+    toast.success(`Farm boundary updated: ${measured.acres} acres (${measured.hectares} ha)`);
+  };
+
+  // Handler: add field with geometry
+  const handleAddFieldWithGeometry = (
+    coords: [number, number][],
+    shape: 'polygon' | 'rectangle' | 'circle'
+  ) => {
+    const areaMeas = calculatePolygonArea(coords);
+    const newIdx = zones.length;
+    const letter = String.fromCharCode(65 + (newIdx % 26));
+    const num = Math.floor(newIdx / 26) + 1;
+
+    // Check for overlap with existing fields
+    const overlappingZone = zones.find(
+      (z) => z.boundary && z.boundary.length >= 3 && doPolygonsOverlap(coords, z.boundary)
+    );
+    if (overlappingZone) {
+      setValidationWarning(`Field boundary overlaps with ${overlappingZone.name}`);
+      toast(`Warning: Plot geometry overlaps with ${overlappingZone.name}`, { icon: '⚠️' });
+    } else {
+      setValidationWarning(null);
+    }
+
+    // Check containment inside farm boundary
+    if (farmBoundary && farmBoundary.length >= 3) {
+      const { inside } = isPolygonInsidePolygon(coords, farmBoundary);
+      if (!inside) {
+        setValidationWarning('Field boundary extends outside farm perimeter');
+      }
+    }
+
+    const newField: ZoneInput = {
+      id: `zone_${farm?.id || Date.now()}_${newIdx + 1}`,
+      name: `Field ${letter}${num}`,
+      area: areaMeas.acres > 0 ? areaMeas.acres : 2.5,
+      crop: cropOptions[newIdx % cropOptions.length],
+      soilType: 'Loamy',
+      growthStage: 'Vegetative',
+      irrigationMethod: 'Drip',
+      soilMoisture: 62,
+      temperature: 28,
+      humidity: 65,
+      rainfall: 80,
+      nitrogen: 45,
+      phosphorus: 22,
+      potassium: 28,
+      healthScore: 84,
+      diseaseRisk: 14,
+      pestRisk: 12,
+      boundary: coords,
+      boundaryShape: shape,
+      stressState: 'healthy',
+    };
+
+    setZones((prev) => [...prev, newField]);
+    setSelectedZoneIndex(newIdx);
+    setDrawingTool('none');
+    toast.success(`Field added: ${newField.name} (${newField.area} acres)`);
+  };
+
+  // Handler: update zone boundary (e.g. vertex drag)
+  const handleUpdateZoneBoundary = (zoneIdx: number, coords: [number, number][]) => {
+    const areaMeas = calculatePolygonArea(coords);
+
+    // Overlap check
+    const overlappingZone = zones.find(
+      (z, idx) => idx !== zoneIdx && z.boundary && z.boundary.length >= 3 && doPolygonsOverlap(coords, z.boundary)
+    );
+    if (overlappingZone) {
+      setValidationWarning(`Field boundary overlaps with ${overlappingZone.name}`);
+    } else {
+      setValidationWarning(null);
+    }
+
+    setZones((prev) => {
+      const updated = [...prev];
+      updated[zoneIdx] = {
+        ...updated[zoneIdx],
+        boundary: coords,
+        area: areaMeas.acres,
+      };
+      return updated;
+    });
+  };
+
+  // Handler: update zone attribute
+  const handleUpdateZoneField = (zoneIdx: number, key: keyof ZoneInput, value: any) => {
+    setZones((prev) => {
+      const updated = [...prev];
+      updated[zoneIdx] = { ...updated[zoneIdx], [key]: value };
+      return updated;
+    });
+  };
+
+  // Handler: delete field
+  const handleDeleteZone = (index: number) => {
+    if (zones.length <= 1) {
+      toast.error('At least 1 field area is required');
+      return;
+    }
+    const deletedName = zones[index]?.name;
+    setZones((prev) => prev.filter((_, i) => i !== index));
+    setSelectedZoneIndex(null);
+    toast.success(`Deleted ${deletedName}`);
+  };
+
+  // Handler: Save
+  const handleSave = async () => {
+    if (!farm) return;
+
+    // 1. Validate crops
+    const missingCrop = zones.find((z) => !z.crop);
+    if (missingCrop) {
+      toast.error(`Please assign a crop for ${missingCrop.name || 'all plots'}`);
+      return;
+    }
+
+    // 2. Validate area
+    const zeroArea = zones.find((z) => !z.area || z.area <= 0);
+    if (zeroArea) {
+      toast.error(`Field ${zeroArea.name} must have an area greater than 0 acres`);
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const updatedFarm: Farm = {
+        ...farm,
+        area: farmAreaCalc.acres,
+        boundary: farmBoundary,
+        boundaryAreaAcres: farmAreaCalc.acres,
+        boundaryAreaHectares: farmAreaCalc.hectares,
+        boundaryPerimeterMeters: farmPerimeterCalc.meters,
+        zones: zones.map((z, i) => ({
+          id: z.id || farm.zones[i]?.id || `zone_${farm.id}_${i + 1}`,
+          farmId: farm.id,
           name: z.name,
           area: z.area,
           crop: z.crop,
@@ -88,57 +416,19 @@ export default function FarmBuilderPage() {
           nitrogen: z.nitrogen,
           phosphorus: z.phosphorus,
           potassium: z.potassium,
-        })));
-      } else {
-        const zoneCount = 3;
-        setZones(
-          Array.from({ length: zoneCount }, (_, i) =>
-            defaultZoneInput(farmData.area, zoneCount, i)
-          )
-        );
-      }
-    } catch (err: any) {
-      setError(err?.message || 'Failed to load farm');
-    } finally {
-      setLoading(false);
-    }
-  };
+          healthScore: z.healthScore ?? 80,
+          diseaseRisk: z.diseaseRisk ?? 15,
+          pestRisk: z.pestRisk ?? 15,
+          boundary: z.boundary,
+          boundaryShape: z.boundaryShape,
+          stressState: z.stressState,
+        })),
+        updatedAt: new Date().toISOString(),
+      };
 
-  const updateZone = (index: number, key: keyof ZoneInput, value: any) => {
-    setZones((prev) => {
-      const updated = [...prev];
-      updated[index] = { ...updated[index], [key]: value };
-      return updated;
-    });
-  };
-
-  const addZone = () => {
-    if (zones.length >= 20) {
-      toast.error('Maximum 20 zones allowed');
-      return;
-    }
-    const newZone = defaultZoneInput(farm?.area || 10, zones.length + 1, zones.length);
-    setZones((prev) => [...prev, newZone]);
-    setExpandedZone(zones.length);
-  };
-
-  const removeZone = (index: number) => {
-    if (zones.length <= 1) {
-      toast.error('At least 1 zone is required');
-      return;
-    }
-    setZones((prev) => prev.filter((_, i) => i !== index));
-    if (expandedZone >= zones.length - 1) {
-      setExpandedZone(Math.max(0, zones.length - 2));
-    }
-  };
-
-  const handleSave = async () => {
-    if (!farm) return;
-    setSaving(true);
-    try {
       // Try API first
       try {
+        await farmApi.update(farm.id, updatedFarm);
         for (let i = 0; i < zones.length; i++) {
           if (farm.zones[i]) {
             await zoneApi.update(farm.id, farm.zones[i].id, zones[i]);
@@ -147,327 +437,446 @@ export default function FarmBuilderPage() {
           }
         }
       } catch {
+        // Fallback to localStorage
         if (isMockEnabled()) {
-          // Save to localStorage
           const farms = JSON.parse(localStorage.getItem('farms') || '[]') as Farm[];
           const idx = farms.findIndex((f) => f.id === farm.id);
           if (idx !== -1) {
-            farms[idx].zones = zones.map((z, i) => ({
-              ...z,
-              id: farm.zones[i]?.id || `zone_${farm.id}_${i + 1}`,
-              farmId: farm.id,
-              healthScore: 70 + Math.random() * 25,
-              diseaseRisk: Math.random() * 30,
-            }));
-            localStorage.setItem('farms', JSON.stringify(farms));
-            setFarm(farms[idx]);
+            farms[idx] = updatedFarm;
+          } else {
+            farms.push(updatedFarm);
           }
+          localStorage.setItem('farms', JSON.stringify(farms));
         } else {
-          throw new Error('Failed to save zones');
+          throw new Error('Failed to save farm and field map data');
         }
       }
-      toast.success('Zones saved successfully!');
+
+      // Synchronize in shared application state
+      updateFarmInState(updatedFarm);
+      selectFarm(farm.id);
+
+      toast.success('Digital Farm Map saved successfully!');
       navigate(`/farms/${farm.id}`);
     } catch (err: any) {
-      toast.error(err?.message || 'Failed to save zones');
+      toast.error(err?.message || 'Failed to save');
     } finally {
       setSaving(false);
     }
   };
 
-  const totalAllocated = zones.reduce((sum, z) => sum + (z.area || 0), 0);
-  const remaining = (farm?.area || 0) - totalAllocated;
-
-  if (loading) return <LoadingSpinner message="Loading farm..." fullPage />;
+  if (loading) return <LoadingSpinner message="Loading interactive digital farm map..." fullPage />;
   if (error) return <ErrorDisplay message={error} onRetry={loadFarm} />;
   if (!farm) return <ErrorDisplay message="Farm not found" />;
 
   return (
-    <div className="page-container">
-      <div className="max-w-6xl mx-auto">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 gap-4">
-          <div>
-            <h1 className="page-title flex items-center gap-3">
-              <Settings2 className="w-7 h-7 text-farm-green" />
-              Farm Builder
-            </h1>
-            <p className="text-gray-500 mt-1">{farm.name} • {farm.location}</p>
-          </div>
+    <div className="flex flex-col h-[calc(100vh-4rem)] overflow-hidden bg-stone-100">
+      {/* 1. TOP HEADER & INTERACTIVE TOOLBAR */}
+      <div className="bg-white border-b border-gray-200 px-4 py-2.5 flex-shrink-0 z-20">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          {/* Farm Title & Geodesic Area Stats */}
           <div className="flex items-center gap-3">
-            <button onClick={addZone} className="btn-secondary flex items-center gap-2">
-              <Plus className="w-4 h-4" />
-              Add Zone
+            <div className="w-10 h-10 rounded-xl bg-farm-green-pale flex items-center justify-center flex-shrink-0">
+              <Compass className="w-5 h-5 text-farm-green" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h1 className="font-extrabold text-gray-900 text-lg sm:text-xl truncate">
+                  {farm.name}
+                </h1>
+                <span className="text-xs bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full font-semibold border border-emerald-300">
+                  Digital Twin Map
+                </span>
+              </div>
+              <p className="text-xs text-gray-500 flex items-center gap-1.5">
+                <MapPin className="w-3.5 h-3.5 text-gray-400" />
+                {farm.location} • <b className="text-gray-800">{farmAreaCalc.acres} acres</b> ({farmAreaCalc.hectares} ha) • Perimeter: {farmPerimeterCalc.meters.toLocaleString()} m
+              </p>
+            </div>
+          </div>
+
+          {/* Action Toolbar */}
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Draw Farm Boundary dropdown/buttons */}
+            <div className="flex items-center bg-amber-50 border border-amber-200 rounded-xl p-0.5">
+              <button
+                onClick={() => {
+                  setDrawingTarget('farm_boundary');
+                  setDrawingTool(drawingTool === 'polygon' && drawingTarget === 'farm_boundary' ? 'none' : 'polygon');
+                }}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all ${
+                  drawingTool === 'polygon' && drawingTarget === 'farm_boundary'
+                    ? 'bg-amber-600 text-white shadow-sm'
+                    : 'text-amber-900 hover:bg-amber-100'
+                }`}
+                title="Draw farm outer boundary polygon"
+              >
+                🚜 Draw Boundary
+              </button>
+            </div>
+
+            {/* Add Field Button with shape tools */}
+            <div className="flex items-center bg-emerald-50 border border-emerald-200 rounded-xl p-0.5">
+              <button
+                onClick={() => {
+                  setDrawingTarget('field');
+                  setDrawingTool(drawingTool === 'polygon' && drawingTarget === 'field' ? 'none' : 'polygon');
+                }}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all ${
+                  drawingTool === 'polygon' && drawingTarget === 'field'
+                    ? 'bg-emerald-600 text-white shadow-sm'
+                    : 'text-emerald-900 hover:bg-emerald-100'
+                }`}
+                title="Draw custom polygon field"
+              >
+                <Plus className="w-3.5 h-3.5" /> Add Field
+              </button>
+              <button
+                onClick={() => {
+                  setDrawingTarget('field');
+                  setDrawingTool(drawingTool === 'rectangle' && drawingTarget === 'field' ? 'none' : 'rectangle');
+                }}
+                className={`px-2 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                  drawingTool === 'rectangle' && drawingTarget === 'field'
+                    ? 'bg-emerald-600 text-white'
+                    : 'text-emerald-800 hover:bg-emerald-100'
+                }`}
+                title="Draw rectangular plot"
+              >
+                Rect
+              </button>
+              <button
+                onClick={() => {
+                  setDrawingTarget('field');
+                  setDrawingTool(drawingTool === 'circle' && drawingTarget === 'field' ? 'none' : 'circle');
+                }}
+                className={`px-2 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                  drawingTool === 'circle' && drawingTarget === 'field'
+                    ? 'bg-emerald-600 text-white'
+                    : 'text-emerald-800 hover:bg-emerald-100'
+                }`}
+                title="Draw circular plot (e.g. center pivot)"
+              >
+                Circle
+              </button>
+            </div>
+
+            {/* Vertex edit toggle */}
+            <button
+              onClick={() => setIsEditingVertices(!isEditingVertices)}
+              className={`px-3 py-1.5 rounded-xl border text-xs font-medium flex items-center gap-1.5 transition-all ${
+                isEditingVertices
+                  ? 'bg-blue-600 text-white border-blue-700 shadow-sm'
+                  : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'
+              }`}
+              title="Drag and edit polygon corner points"
+            >
+              <Edit3 className="w-3.5 h-3.5" />
+              {isEditingVertices ? 'Finish Editing' : 'Edit Vertices'}
             </button>
+
+            {/* Map Tile Layer Toggle */}
+            <div className="flex items-center bg-gray-100 rounded-xl p-0.5 border border-gray-200 text-xs">
+              <button
+                onClick={() => setActiveLayer('satellite')}
+                className={`px-2.5 py-1 rounded-lg font-medium transition-all ${
+                  activeLayer === 'satellite' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                🛰️ Satellite
+              </button>
+              <button
+                onClick={() => setActiveLayer('streets')}
+                className={`px-2.5 py-1 rounded-lg font-medium transition-all ${
+                  activeLayer === 'streets' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                🗺️ Streets
+              </button>
+              <button
+                onClick={() => setActiveLayer('topo')}
+                className={`px-2.5 py-1 rounded-lg font-medium transition-all ${
+                  activeLayer === 'topo' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                🏔️ Topo
+              </button>
+            </div>
+
+            {/* View Mode Toggle */}
+            <div className="flex items-center bg-gray-100 rounded-xl p-0.5 border border-gray-200 text-xs">
+              <button
+                onClick={() => setViewMode('health')}
+                className={`px-2.5 py-1 rounded-lg font-medium transition-all ${
+                  viewMode === 'health' ? 'bg-white text-emerald-800 shadow-sm font-semibold' : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                ❤️ Health
+              </button>
+              <button
+                onClick={() => setViewMode('crops')}
+                className={`px-2.5 py-1 rounded-lg font-medium transition-all ${
+                  viewMode === 'crops' ? 'bg-white text-farm-green shadow-sm font-semibold' : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                🌿 Crops
+              </button>
+              <button
+                onClick={() => setViewMode('moisture')}
+                className={`px-2.5 py-1 rounded-lg font-medium transition-all ${
+                  viewMode === 'moisture' ? 'bg-white text-blue-800 shadow-sm font-semibold' : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                💧 Moisture
+              </button>
+            </div>
+
+            {/* Live Weather Button */}
+            <button
+              onClick={() => setShowWeatherOverlay(!showWeatherOverlay)}
+              className={`px-3 py-1.5 rounded-xl border text-xs font-semibold flex items-center gap-1.5 transition-all ${
+                showWeatherOverlay
+                  ? 'bg-sky-600 text-white border-sky-700 shadow-sm'
+                  : 'bg-white border-gray-200 text-gray-700 hover:bg-sky-50'
+              }`}
+              title="Toggle Live Farm Weather & Agronomic Forecast"
+            >
+              <span>{weather ? weather.weatherEmoji : '⛅'}</span>
+              <span>{weather ? `${Math.round(weather.temperature)}°C` : 'Live Weather'}</span>
+              {agronomicImpact && agronomicImpact.alerts.length > 0 && (
+                <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" title="Active Weather Alert" />
+              )}
+            </button>
+
+            {/* Save Button */}
             <button
               onClick={handleSave}
               disabled={saving}
-              className="btn-primary flex items-center gap-2"
+              className="btn-primary py-2 px-4 text-xs font-semibold flex items-center gap-2 shadow-md hover:shadow-lg"
             >
-              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+              {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
               {saving ? 'Saving...' : 'Save & Continue'}
             </button>
           </div>
         </div>
 
-        <div className="grid lg:grid-cols-3 gap-6">
-          {/* Farm Visual */}
-          <div className="lg:col-span-1">
-            <div className="card sticky top-24">
-              <h2 className="section-title mb-4">Farm Overview</h2>
-
-              {/* Area allocation bar */}
-              <div className="mb-4">
-                <div className="flex justify-between text-sm mb-1">
-                  <span className="text-gray-500">Area allocated</span>
-                  <span className={`font-medium ${remaining < 0 ? 'text-red-500' : 'text-gray-700'}`}>
-                    {totalAllocated.toFixed(1)} / {farm.area} acres
-                  </span>
-                </div>
-                <div className="h-3 bg-gray-100 rounded-full overflow-hidden">
-                  <div
-                    className={`h-full rounded-full transition-all duration-500 ${
-                      remaining < 0 ? 'bg-red-500' : remaining === 0 ? 'bg-farm-green' : 'bg-farm-green-light'
-                    }`}
-                    style={{ width: `${Math.min(100, (totalAllocated / farm.area) * 100)}%` }}
-                  />
-                </div>
-                {remaining < 0 && (
-                  <p className="text-xs text-red-500 mt-1">Over-allocated by {Math.abs(remaining).toFixed(1)} acres</p>
-                )}
-              </div>
-
-              {/* Visual Farm Grid */}
-              <div className="grid grid-cols-2 gap-2 mb-4">
-                {zones.map((zone, i) => (
-                  <button
-                    key={i}
-                    onClick={() => setExpandedZone(i)}
-                    className={`relative rounded-xl p-3 text-left transition-all duration-200 border-2 ${
-                      expandedZone === i
-                        ? 'border-farm-green shadow-md scale-[1.02]'
-                        : 'border-transparent hover:border-gray-200'
-                    }`}
-                    style={{
-                      backgroundColor: cropColors[zone.crop] + '20',
-                      minHeight: `${Math.max(60, (zone.area / farm.area) * 200)}px`,
-                    }}
-                  >
-                    <span className="text-lg">{cropEmojis[zone.crop]}</span>
-                    <p className="text-xs font-semibold text-gray-800 mt-1 truncate">{zone.name}</p>
-                    <p className="text-[10px] text-gray-500">{zone.crop}</p>
-                    <p className="text-[10px] text-gray-400">{zone.area}ac</p>
-                  </button>
-                ))}
-              </div>
-
-              {/* Legend */}
-              <div className="space-y-1.5">
-                {zones.map((zone, i) => (
-                  <div key={i} className="flex items-center gap-2 text-xs">
-                    <div
-                      className="w-3 h-3 rounded-sm"
-                      style={{ backgroundColor: cropColors[zone.crop] }}
-                    />
-                    <span className="text-gray-600 truncate">{zone.name}: {zone.crop}</span>
-                  </div>
-                ))}
-              </div>
+        {/* Validation Warning Alert Banner */}
+        {validationWarning && (
+          <div className="mt-2 p-2.5 bg-amber-50 border border-amber-300 rounded-xl text-xs text-amber-900 flex items-center justify-between animate-fadeIn">
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0" />
+              <span className="font-semibold">{validationWarning}</span>
             </div>
-          </div>
-
-          {/* Zone Configuration */}
-          <div className="lg:col-span-2 space-y-4">
-            {zones.map((zone, i) => (
-              <div
-                key={i}
-                className={`card border-2 transition-all duration-200 ${
-                  expandedZone === i ? 'border-farm-green/30' : 'border-transparent'
-                }`}
-              >
-                {/* Zone Header */}
-                <button
-                  onClick={() => setExpandedZone(expandedZone === i ? -1 : i)}
-                  className="w-full flex items-center justify-between"
-                >
-                  <div className="flex items-center gap-3">
-                    <span className="text-xl">{cropEmojis[zone.crop]}</span>
-                    <div className="text-left">
-                      <h3 className="font-semibold text-gray-900">{zone.name}</h3>
-                      <p className="text-xs text-gray-500">
-                        {zone.crop} • {zone.soilType} soil • {zone.area} acres
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={(e) => { e.stopPropagation(); removeZone(i); }}
-                      className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                    {expandedZone === i ? (
-                      <ChevronUp className="w-5 h-5 text-gray-400" />
-                    ) : (
-                      <ChevronDown className="w-5 h-5 text-gray-400" />
-                    )}
-                  </div>
-                </button>
-
-                {/* Zone Details (expanded) */}
-                {expandedZone === i && (
-                  <div className="mt-5 pt-5 border-t border-gray-100 space-y-5">
-                    {/* Basic Info */}
-                    <div className="grid sm:grid-cols-3 gap-4">
-                      <div>
-                        <label className="label">Zone Name</label>
-                        <input
-                          type="text"
-                          className="input-field"
-                          value={zone.name}
-                          onChange={(e) => updateZone(i, 'name', e.target.value)}
-                        />
-                      </div>
-                      <div>
-                        <label className="label">Area (acres)</label>
-                        <input
-                          type="number"
-                          className="input-field"
-                          min="0.1"
-                          step="0.1"
-                          value={zone.area}
-                          onChange={(e) => updateZone(i, 'area', parseFloat(e.target.value) || 0)}
-                        />
-                      </div>
-                      <div>
-                        <label className="label">Crop</label>
-                        <select
-                          className="select-field"
-                          value={zone.crop}
-                          onChange={(e) => updateZone(i, 'crop', e.target.value as CropType)}
-                        >
-                          {cropOptions.map((c) => (
-                            <option key={c} value={c}>{cropEmojis[c]} {c}</option>
-                          ))}
-                        </select>
-                      </div>
-                    </div>
-
-                    {/* Soil & Growth */}
-                    <div className="grid sm:grid-cols-3 gap-4">
-                      <div>
-                        <label className="label">Soil Type</label>
-                        <select
-                          className="select-field"
-                          value={zone.soilType}
-                          onChange={(e) => updateZone(i, 'soilType', e.target.value as SoilType)}
-                        >
-                          {soilOptions.map((s) => (
-                            <option key={s} value={s}>{s}</option>
-                          ))}
-                        </select>
-                      </div>
-                      <div>
-                        <label className="label">Growth Stage</label>
-                        <select
-                          className="select-field"
-                          value={zone.growthStage}
-                          onChange={(e) => updateZone(i, 'growthStage', e.target.value as GrowthStage)}
-                        >
-                          {growthStages.map((g) => (
-                            <option key={g} value={g}>{g}</option>
-                          ))}
-                        </select>
-                      </div>
-                      <div>
-                        <label className="label">Irrigation Method</label>
-                        <select
-                          className="select-field"
-                          value={zone.irrigationMethod}
-                          onChange={(e) => updateZone(i, 'irrigationMethod', e.target.value as IrrigationMethod)}
-                        >
-                          {irrigationMethods.map((m) => (
-                            <option key={m} value={m}>{m}</option>
-                          ))}
-                        </select>
-                      </div>
-                    </div>
-
-                    {/* Environment */}
-                    <div>
-                      <h4 className="text-sm font-semibold text-gray-700 flex items-center gap-2 mb-3">
-                        <Thermometer className="w-4 h-4 text-orange-500" />
-                        Environment
-                      </h4>
-                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                        <div>
-                          <label className="label">Soil Moisture (%)</label>
-                          <input type="number" className="input-field" min="0" max="100"
-                            value={zone.soilMoisture}
-                            onChange={(e) => updateZone(i, 'soilMoisture', parseFloat(e.target.value) || 0)} />
-                        </div>
-                        <div>
-                          <label className="label">Temperature (°C)</label>
-                          <input type="number" className="input-field" min="-10" max="60"
-                            value={zone.temperature}
-                            onChange={(e) => updateZone(i, 'temperature', parseFloat(e.target.value) || 0)} />
-                        </div>
-                        <div>
-                          <label className="label">Humidity (%)</label>
-                          <input type="number" className="input-field" min="0" max="100"
-                            value={zone.humidity}
-                            onChange={(e) => updateZone(i, 'humidity', parseFloat(e.target.value) || 0)} />
-                        </div>
-                        <div>
-                          <label className="label">Rainfall (mm)</label>
-                          <input type="number" className="input-field" min="0"
-                            value={zone.rainfall}
-                            onChange={(e) => updateZone(i, 'rainfall', parseFloat(e.target.value) || 0)} />
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Nutrients */}
-                    <div>
-                      <h4 className="text-sm font-semibold text-gray-700 flex items-center gap-2 mb-3">
-                        <FlaskConical className="w-4 h-4 text-purple-500" />
-                        Nutrients (kg/ha)
-                      </h4>
-                      <div className="grid grid-cols-3 gap-4">
-                        <div>
-                          <label className="label">Nitrogen (N)</label>
-                          <input type="number" className="input-field" min="0"
-                            value={zone.nitrogen}
-                            onChange={(e) => updateZone(i, 'nitrogen', parseFloat(e.target.value) || 0)} />
-                        </div>
-                        <div>
-                          <label className="label">Phosphorus (P)</label>
-                          <input type="number" className="input-field" min="0"
-                            value={zone.phosphorus}
-                            onChange={(e) => updateZone(i, 'phosphorus', parseFloat(e.target.value) || 0)} />
-                        </div>
-                        <div>
-                          <label className="label">Potassium (K)</label>
-                          <input type="number" className="input-field" min="0"
-                            value={zone.potassium}
-                            onChange={(e) => updateZone(i, 'potassium', parseFloat(e.target.value) || 0)} />
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            ))}
-
-            {/* Add zone button */}
             <button
-              onClick={addZone}
-              className="w-full py-4 rounded-2xl border-2 border-dashed border-gray-200 text-gray-400 hover:border-farm-green hover:text-farm-green transition-colors flex items-center justify-center gap-2"
+              onClick={() => setValidationWarning(null)}
+              className="text-amber-700 hover:text-amber-900 font-bold px-2 py-0.5 rounded hover:bg-amber-100"
             >
-              <Plus className="w-5 h-5" />
-              Add Another Zone
+              Dismiss
             </button>
           </div>
+        )}
+      </div>
+
+      {/* 2. MAIN WORKSPACE: MAP (HERO) + SIDE INSPECTOR */}
+      <div className="flex-1 flex flex-col lg:flex-row overflow-hidden p-3 gap-3">
+        {/* MAP CONTAINER (CENTRAL HERO WORKSPACE) */}
+        <div className="flex-1 h-full min-h-[450px] relative rounded-2xl overflow-hidden shadow-lg border border-gray-200">
+          <DigitalFarmMap
+            farmName={farm.name}
+            center={mapCenter}
+            farmBoundary={farmBoundary}
+            zones={zones}
+            selectedZoneIndex={selectedZoneIndex}
+            drawingTool={drawingTool}
+            drawingTarget={drawingTarget}
+            activeLayer={activeLayer}
+            viewMode={viewMode}
+            isEditingVertices={isEditingVertices}
+            liveWeather={weather}
+            onSelectZone={(idx) => setSelectedZoneIndex(idx)}
+            onUpdateFarmBoundary={handleUpdateFarmBoundary}
+            onAddFieldWithGeometry={handleAddFieldWithGeometry}
+            onUpdateZoneBoundary={handleUpdateZoneBoundary}
+            onCancelDrawing={() => setDrawingTool('none')}
+            onValidationWarning={(w) => setValidationWarning(w)}
+          />
+
+          {/* Floating Live Weather Card overlay on map */}
+          {showWeatherOverlay && (
+            <div className="absolute top-4 right-4 z-[950] w-full max-w-[360px] animate-fadeIn">
+              <WeatherCard
+                weather={weather}
+                loading={weatherLoading}
+                isRefreshing={weatherRefreshing}
+                error={weatherError}
+                lastUpdatedLabel={weatherUpdatedLabel}
+                agronomicImpact={agronomicImpact}
+                onRefresh={refreshWeather}
+                onApplyWeatherToZones={handleApplyWeatherToZones}
+                compact={false}
+              />
+            </div>
+          )}
+        </div>
+
+        {/* SIDE PANEL: FIELD DETAILS OR FARM SUMMARY */}
+        <div className="w-full lg:w-[380px] xl:w-[420px] flex-shrink-0 h-full flex flex-col overflow-hidden">
+          {selectedZoneIndex !== null && zones[selectedZoneIndex] ? (
+            <FieldDetailsPanel
+              zone={zones[selectedZoneIndex]}
+              zoneIndex={selectedZoneIndex}
+              totalFarmArea={farmAreaCalc.acres}
+              onUpdate={handleUpdateZoneField}
+              onDelete={handleDeleteZone}
+              onClose={() => setSelectedZoneIndex(null)}
+              onCenterField={() => {
+                if (zones[selectedZoneIndex].boundary) {
+                  const center = getPolygonCenter(zones[selectedZoneIndex].boundary!);
+                  setMapCenter(center);
+                }
+              }}
+            />
+          ) : (
+            /* Farm Summary & Field List Hub when no field is selected */
+            <div className="bg-white rounded-2xl shadow-xl border border-gray-200 flex flex-col h-full overflow-hidden p-4 space-y-3">
+              {/* Segmented Switch: Plots vs Farm Intelligence */}
+              <div className="flex bg-stone-100 p-1 rounded-xl border border-gray-200 text-xs font-semibold">
+                <button
+                  onClick={() => setSidebarTab('plots')}
+                  className={`flex-1 py-1.5 rounded-lg flex items-center justify-center gap-1.5 transition-all ${
+                    sidebarTab === 'plots' ? 'bg-white text-gray-900 shadow-sm font-bold' : 'text-gray-500 hover:text-gray-900'
+                  }`}
+                >
+                  <Sprout className="w-3.5 h-3.5 text-farm-green" />
+                  Plots ({zones.length})
+                </button>
+                <button
+                  onClick={() => setSidebarTab('intelligence')}
+                  className={`flex-1 py-1.5 rounded-lg flex items-center justify-center gap-1.5 transition-all ${
+                    sidebarTab === 'intelligence' ? 'bg-white text-emerald-900 shadow-sm font-bold' : 'text-gray-500 hover:text-gray-900'
+                  }`}
+                >
+                  <Brain className="w-3.5 h-3.5 text-blue-600" />
+                  Intelligence
+                  {farmIntelligence && farmIntelligence.headlineAlerts.length > 0 && (
+                    <span className="bg-red-500 text-white text-[10px] px-1.5 py-0.2 rounded-full font-mono">
+                      {farmIntelligence.headlineAlerts.length}
+                    </span>
+                  )}
+                </button>
+              </div>
+
+              {sidebarTab === 'plots' ? (
+                <>
+                  <div>
+                    <h2 className="section-title text-base flex items-center justify-between mb-1">
+                      <span>Farm Plots & Allocation</span>
+                      <span className="text-xs font-normal text-gray-500">{zones.length} fields</span>
+                    </h2>
+                    <p className="text-xs text-gray-500">
+                      Click on any field on the map or in the list below to view and edit its agronomic parameters.
+                    </p>
+                  </div>
+
+                  {/* Area Allocation Progress Bar */}
+                  <div className="p-3 bg-stone-50 rounded-xl border border-gray-200 space-y-2">
+                    <div className="flex justify-between items-center text-xs font-medium">
+                      <span className="text-gray-600">Total Farm Area:</span>
+                      <span className="font-bold text-gray-900">{farmAreaCalc.acres} acres ({farmAreaCalc.hectares} ha)</span>
+                    </div>
+                    <div className="flex justify-between items-center text-xs">
+                      <span className="text-gray-500">Field Allocation:</span>
+                      <span className={`font-semibold ${remainingAcres < 0 ? 'text-red-600' : 'text-emerald-700'}`}>
+                        {totalAllocatedAcres} / {farmAreaCalc.acres} acres ({farmAreaCalc.acres > 0 ? ((totalAllocatedAcres / farmAreaCalc.acres) * 100).toFixed(0) : 0}%)
+                      </span>
+                    </div>
+                    <div className="h-2.5 bg-gray-200 rounded-full overflow-hidden">
+                      <div
+                        className={`h-full rounded-full transition-all duration-300 ${
+                          remainingAcres < 0 ? 'bg-red-500' : 'bg-farm-green'
+                        }`}
+                        style={{ width: `${Math.min(100, farmAreaCalc.acres > 0 ? (totalAllocatedAcres / farmAreaCalc.acres) * 100 : 0)}%` }}
+                      />
+                    </div>
+                    {remainingAcres < 0 ? (
+                      <p className="text-[11px] text-red-500">⚠️ Over-allocated by {Math.abs(remainingAcres)} acres.</p>
+                    ) : remainingAcres > 0 ? (
+                      <p className="text-[11px] text-gray-500">{remainingAcres} acres remaining unassigned.</p>
+                    ) : (
+                      <p className="text-[11px] text-emerald-600 font-medium">✓ 100% farm area mapped to fields.</p>
+                    )}
+                  </div>
+
+                  {/* Field Cards Quick List */}
+                  <div className="flex-1 overflow-y-auto space-y-2 pr-1">
+                    {zones.map((z, idx) => (
+                      <div
+                        key={z.id || idx}
+                        onClick={() => setSelectedZoneIndex(idx)}
+                        className="p-3 rounded-xl border border-gray-200 hover:border-farm-green bg-white hover:bg-stone-50 cursor-pointer transition-all flex items-center justify-between group shadow-sm"
+                      >
+                        <div className="flex items-center gap-2.5">
+                          <span className="text-2xl">{cropEmojis[z.crop] || '🌱'}</span>
+                          <div>
+                            <h3 className="font-bold text-gray-900 text-sm group-hover:text-farm-green transition-colors">
+                              {z.name}
+                            </h3>
+                            <p className="text-xs text-gray-500">
+                              {z.crop} • {z.soilType} soil • <b className="text-gray-700">{z.area} ac</b>
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-xs px-2 py-0.5 rounded-full font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                            {Math.round(z.healthScore ?? 80)}% Health
+                          </span>
+                          <ChevronRight className="w-4 h-4 text-gray-400 group-hover:text-farm-green transition-colors" />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Action buttons footer */}
+                  <div className="pt-2 border-t border-gray-100 flex items-center gap-2">
+                    <button
+                      onClick={() => {
+                        setDrawingTarget('field');
+                        setDrawingTool('polygon');
+                      }}
+                      className="flex-1 btn-secondary py-2 text-xs flex items-center justify-center gap-1.5"
+                    >
+                      <Plus className="w-3.5 h-3.5" /> Draw New Field
+                    </button>
+                    <button
+                      onClick={handleSave}
+                      disabled={saving}
+                      className="flex-1 btn-primary py-2 text-xs flex items-center justify-center gap-1.5"
+                    >
+                      <Save className="w-3.5 h-3.5" /> Save Map
+                    </button>
+                  </div>
+                </>
+              ) : (
+                /* Intelligence View in Sidebar */
+                <div className="flex-1 overflow-y-auto pr-1">
+                  {farmIntelligence ? (
+                    <FarmIntelligencePanel
+                      intelligence={farmIntelligence}
+                      onSelectField={(fieldName) => {
+                        const idx = zones.findIndex((z) => z.name === fieldName);
+                        if (idx !== -1) {
+                          setSelectedZoneIndex(idx);
+                        }
+                      }}
+                      compact={true}
+                    />
+                  ) : (
+                    <div className="p-4 text-center text-xs text-gray-500">Loading intelligence...</div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </div>
