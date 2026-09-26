@@ -1,22 +1,38 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MapPin, Ruler, Grid3x3, Sprout, ArrowRight, Loader2 } from 'lucide-react';
+import { MapPin, Ruler, Grid3x3, Sprout, ArrowRight, Loader2, Sparkles, User as UserIcon } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { farmApi } from '../services/api';
 import { isMockEnabled, createMockFarm } from '../services/mockData';
+import { useFarmContext } from '../context/FarmContext';
+import { useAuth } from '../context/AuthContext';
 import type { FarmCreateInput, Farm } from '../types';
 
 export default function FarmCreatePage() {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const { refreshFarms, selectFarm } = useFarmContext();
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState<FarmCreateInput>({
     name: '',
-    location: '',
+    location: user?.location || '',
     area: 10,
     latitude: undefined,
     longitude: undefined,
     numberOfZones: 3,
+    ownerId: user?.id,
   });
+
+  useEffect(() => {
+    if (user) {
+      setForm((prev) => ({
+        ...prev,
+        ownerId: user.id,
+        location: prev.location || user.location || '',
+      }));
+    }
+  }, [user]);
+
   const [errors, setErrors] = useState<Partial<Record<keyof FarmCreateInput, string>>>({});
 
   const validate = (): boolean => {
@@ -41,13 +57,18 @@ export default function FarmCreatePage() {
     if (!validate()) return;
 
     setLoading(true);
+    const payload: FarmCreateInput = {
+      ...form,
+      ownerId: user?.id || 'farmer_punjab',
+    };
+
     try {
       let farm: Farm;
       try {
-        farm = await farmApi.create(form);
+        farm = await farmApi.create(payload);
       } catch {
         if (isMockEnabled()) {
-          farm = createMockFarm(form);
+          farm = createMockFarm(payload);
           // Store in localStorage for mock mode
           const farms = JSON.parse(localStorage.getItem('farms') || '[]');
           farms.push(farm);
@@ -57,7 +78,9 @@ export default function FarmCreatePage() {
           throw new Error('Failed to create farm');
         }
       }
-      toast.success('Farm created successfully!');
+      await refreshFarms();
+      selectFarm(farm.id);
+      toast.success('Farm created successfully! Opening Farm Map Builder...');
       navigate(`/farms/${farm.id}/builder`);
     } catch (err: any) {
       toast.error(err?.message || 'Failed to create farm');
@@ -87,6 +110,12 @@ export default function FarmCreatePage() {
           <p className="text-gray-500 ml-[52px]">
             Set up your farm details. You'll configure zones and crops in the next step.
           </p>
+          {user && (
+            <div className="ml-[52px] mt-3 inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-xs text-emerald-800">
+              <UserIcon className="w-3.5 h-3.5 text-emerald-600" />
+              <span>Owner account: <strong>{user.name}</strong> ({user.email})</span>
+            </div>
+          )}
         </div>
 
         {/* Form */}
@@ -123,6 +152,30 @@ export default function FarmCreatePage() {
                   />
                 </div>
                 {errors.location && <p className="text-sm text-red-500 mt-1">{errors.location}</p>}
+
+                {/* Location Quick Presets */}
+                <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                  <span className="text-xs text-gray-400 font-medium mr-1">Quick Select:</span>
+                  {[
+                    { name: 'Ludhiana, Punjab', lat: 30.9010, lng: 75.8573 },
+                    { name: 'Fresno, California', lat: 36.7468, lng: -119.7726 },
+                    { name: 'Ames, Iowa', lat: 42.0308, lng: -93.6319 },
+                    { name: 'Austin, Texas', lat: 30.2672, lng: -97.7431 },
+                  ].map((preset) => (
+                    <button
+                      key={preset.name}
+                      type="button"
+                      onClick={() => {
+                        updateField('location', preset.name);
+                        updateField('latitude', preset.lat);
+                        updateField('longitude', preset.lng);
+                      }}
+                      className="text-xs px-2.5 py-1 rounded-lg bg-stone-100 hover:bg-emerald-50 hover:text-farm-green text-gray-600 transition-colors border border-gray-200"
+                    >
+                      {preset.name}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
           </div>

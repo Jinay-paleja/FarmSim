@@ -1,0 +1,12 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // FarmSim accesses Firestore through the FastAPI service and its Firebase
+    // Admin SDK. Admin SDK calls bypass these rules; browsers do not. Keeping
+    // direct browser access closed prevents a user from querying another
+    // farmer's farms with the Firebase client or the DevTools console.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

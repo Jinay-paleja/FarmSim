@@ -1,20 +1,246 @@
 /**
- * Mock data for development purposes.
- * This module provides fallback data when the backend is unavailable.
- * It should be removed or disabled when the backend is connected.
+ * Seed & Mock Data for FarmSim AI
  */
 
 import type {
-  Farm, Zone, SimulationResult, ComparisonResult, CropType, SoilType,
+  Farm,
+  Zone,
+  SimulationResult,
+  ComparisonResult,
+  CropType,
+  SoilType,
 } from '../types';
 
-const MOCK_ENABLED = true; // Set to false to disable mock data
-
 export function isMockEnabled(): boolean {
-  return MOCK_ENABLED;
+  // Demo data must be opt-in. Returning true here made a failed API/Firestore
+  // request look successful and repopulated every account with the shared
+  // sample farms.
+  return import.meta.env.VITE_ENABLE_MOCKS === 'true';
 }
 
-export function createMockFarm(input: { name: string; location: string; area: number; numberOfZones: number; latitude?: number; longitude?: number }): Farm {
+export const INITIAL_DEFAULT_FARMS: Farm[] = [
+  {
+    id: 'farm_green_valley',
+    ownerId: 'farmer_punjab',
+    name: 'Green Valley Agro Farm',
+    location: 'Ludhiana, Punjab, India',
+    area: 12.4,
+    latitude: 30.901,
+    longitude: 75.8573,
+    numberOfZones: 3,
+    boundary: [
+      [30.903, 75.854],
+      [30.903, 75.86],
+      [30.899, 75.86],
+      [30.899, 75.854],
+    ],
+    boundaryShape: 'polygon',
+    boundaryAreaAcres: 12.4,
+    boundaryAreaHectares: 5.02,
+    boundaryPerimeterMeters: 1450,
+    zones: [
+      {
+        id: 'zone_punjab_1',
+        farmId: 'farm_green_valley',
+        name: 'North Plot A (Basmati Rice)',
+        area: 4.5,
+        crop: 'Rice',
+        soilType: 'Alluvial',
+        growthStage: 'Vegetative',
+        irrigationMethod: 'Flood',
+        soilMoisture: 68,
+        temperature: 28,
+        humidity: 75,
+        rainfall: 120,
+        nitrogen: 65,
+        phosphorus: 28,
+        potassium: 35,
+        healthScore: 88,
+        diseaseRisk: 12,
+        stressState: 'healthy',
+        boundary: [
+          [30.903, 75.854],
+          [30.903, 75.858],
+          [30.901, 75.858],
+          [30.901, 75.854],
+        ],
+      },
+      {
+        id: 'zone_punjab_2',
+        farmId: 'farm_green_valley',
+        name: 'South Field B (Sharbati Wheat)',
+        area: 5.0,
+        crop: 'Wheat',
+        soilType: 'Loamy',
+        growthStage: 'Flowering',
+        irrigationMethod: 'Sprinkler',
+        soilMoisture: 52,
+        temperature: 26,
+        humidity: 60,
+        rainfall: 80,
+        nitrogen: 55,
+        phosphorus: 32,
+        potassium: 40,
+        healthScore: 82,
+        diseaseRisk: 18,
+        stressState: 'healthy',
+        boundary: [
+          [30.901, 75.854],
+          [30.901, 75.858],
+          [30.899, 75.858],
+          [30.899, 75.854],
+        ],
+      },
+      {
+        id: 'zone_punjab_3',
+        farmId: 'farm_green_valley',
+        name: 'East Field C (Mustard & Cotton)',
+        area: 2.9,
+        crop: 'Mustard',
+        soilType: 'Alluvial',
+        growthStage: 'Seedling',
+        irrigationMethod: 'Drip',
+        soilMoisture: 45,
+        temperature: 27,
+        humidity: 55,
+        rainfall: 60,
+        nitrogen: 40,
+        phosphorus: 20,
+        potassium: 30,
+        healthScore: 78,
+        diseaseRisk: 8,
+        stressState: 'healthy',
+        boundary: [
+          [30.903, 75.858],
+          [30.903, 75.86],
+          [30.899, 75.86],
+          [30.899, 75.858],
+        ],
+      },
+    ],
+    createdAt: '2024-01-15T08:00:00.000Z',
+    updatedAt: '2024-05-20T10:30:00.000Z',
+  },
+  {
+    id: 'farm_california_valley',
+    ownerId: 'farmer_california',
+    name: 'Fresno Precision Orchard & Vineyard',
+    location: 'Fresno, California, USA',
+    area: 8.7,
+    latitude: 36.7468,
+    longitude: -119.7726,
+    numberOfZones: 2,
+    boundary: [
+      [36.749, -119.775],
+      [36.749, -119.77],
+      [36.744, -119.77],
+      [36.744, -119.775],
+    ],
+    boundaryShape: 'polygon',
+    boundaryAreaAcres: 8.7,
+    boundaryAreaHectares: 3.52,
+    boundaryPerimeterMeters: 1120,
+    zones: [
+      {
+        id: 'zone_cal_1',
+        farmId: 'farm_california_valley',
+        name: 'Block 1 - Premium Drip Orchard',
+        area: 4.7,
+        crop: 'Soybean',
+        soilType: 'Loamy',
+        growthStage: 'Vegetative',
+        irrigationMethod: 'Drip',
+        soilMoisture: 42,
+        temperature: 32,
+        humidity: 35,
+        rainfall: 15,
+        nitrogen: 70,
+        phosphorus: 40,
+        potassium: 60,
+        healthScore: 90,
+        diseaseRisk: 5,
+        stressState: 'healthy',
+      },
+      {
+        id: 'zone_cal_2',
+        farmId: 'farm_california_valley',
+        name: 'Block 2 - Cotton & Row Crops',
+        area: 4.0,
+        crop: 'Cotton',
+        soilType: 'Sandy',
+        growthStage: 'Flowering',
+        irrigationMethod: 'Center Pivot',
+        soilMoisture: 38,
+        temperature: 34,
+        humidity: 30,
+        rainfall: 10,
+        nitrogen: 50,
+        phosphorus: 35,
+        potassium: 45,
+        healthScore: 75,
+        diseaseRisk: 14,
+        stressState: 'moderate_stress',
+      },
+    ],
+    createdAt: '2024-02-10T09:15:00.000Z',
+    updatedAt: '2024-05-18T14:20:00.000Z',
+  },
+];
+
+export function ensureDefaultFarms(): Farm[] {
+  try {
+    const stored = localStorage.getItem('farms');
+    if (stored) {
+      const parsed = JSON.parse(stored) as Farm[];
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed;
+      }
+    }
+  } catch {
+    // fallback
+  }
+
+  try {
+    localStorage.setItem('farms', JSON.stringify(INITIAL_DEFAULT_FARMS));
+  } catch {
+    // ignore
+  }
+  return INITIAL_DEFAULT_FARMS;
+}
+
+export function getMockFarms(): Farm[] {
+  return ensureDefaultFarms();
+}
+
+export function getMockFarmById(farmId: string): Farm | undefined {
+  const farms = ensureDefaultFarms();
+  return farms.find((f) => f.id === farmId);
+}
+
+export function saveMockFarm(farm: Farm): Farm {
+  const farms = ensureDefaultFarms();
+  const idx = farms.findIndex((f) => f.id === farm.id);
+  if (idx !== -1) {
+    farms[idx] = farm;
+  } else {
+    farms.push(farm);
+  }
+  try {
+    localStorage.setItem('farms', JSON.stringify(farms));
+  } catch {
+    // ignore
+  }
+  return farm;
+}
+
+export function createMockFarm(input: {
+  name: string;
+  location: string;
+  area: number;
+  numberOfZones: number;
+  latitude?: number;
+  longitude?: number;
+}): Farm {
   const farmId = `farm_${Date.now()}`;
   const zones: Zone[] = Array.from({ length: input.numberOfZones }, (_, i) => ({
     id: `zone_${farmId}_${i + 1}`,
@@ -36,16 +262,19 @@ export function createMockFarm(input: { name: string; location: string; area: nu
     diseaseRisk: Math.random() * 40,
   }));
 
-  return {
+  const farm: Farm = {
     id: farmId,
     name: input.name,
     location: input.location,
     area: input.area,
     latitude: input.latitude,
     longitude: input.longitude,
+    numberOfZones: input.numberOfZones,
     zones,
     createdAt: new Date().toISOString(),
   };
+
+  return saveMockFarm(farm);
 }
 
 export function createMockSimulation(farmId: string, scenarioName: string): SimulationResult {
@@ -92,14 +321,13 @@ export function createMockSimulation(farmId: string, scenarioName: string): Simu
       totalExpectedYield: Math.round(yield_ * 100) / 10,
       averageSoilMoisture: Math.round(moisture * 10) / 10,
     },
-    aiExplanation: `Based on the "${scenarioName || 'Baseline'}" scenario analysis: The simulation projects soil moisture trending ${moisture > 60 ? 'stable' : 'downward'} over the 90-day period. Crop health is expected to ${health > 70 ? 'remain robust' : 'face moderate stress'}, with disease risk at ${disease > 30 ? 'elevated' : 'manageable'} levels. Water consumption patterns suggest ${water > 120 ? 'above-average' : 'moderate'} irrigation needs. Expected yield projections indicate a ${yield_ > 80 ? 'strong' : yield_ > 60 ? 'moderate' : 'reduced'} harvest potential. Consider adjusting irrigation schedules and monitoring soil nutrient levels for optimal outcomes.`,
+    aiExplanation: `Based on the "${scenarioName || 'Baseline'}" scenario analysis: The simulation projects soil moisture trending ${moisture > 60 ? 'stable' : 'downward'} over the period.`,
     createdAt: new Date().toISOString(),
   };
 }
 
 export function createMockComparison(simulations: SimulationResult[]): ComparisonResult {
   const days = [1, 7, 15, 30, 45, 60, 75, 90];
-
   return {
     simulations: simulations.map((sim) => ({
       id: sim.id,
@@ -122,6 +350,6 @@ export function createMockComparison(simulations: SimulationResult[]): Compariso
         };
       }),
     })),
-    aiExplanation: `Comparing ${simulations.length} scenarios reveals significant differences in expected outcomes. ${simulations.length >= 2 ? `The "${simulations[0].scenarioName}" scenario shows ${simulations[0].summary.averageCropHealth > simulations[1].summary.averageCropHealth ? 'higher' : 'lower'} crop health compared to "${simulations[1].scenarioName}".` : ''} Water usage varies across scenarios, suggesting opportunities for optimization. Disease risk patterns differ based on environmental conditions, with proactive management recommended for higher-risk scenarios.`,
+    aiExplanation: `Comparing ${simulations.length} scenarios reveals key differences in expected outcomes.`,
   };
 }

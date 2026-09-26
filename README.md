@@ -1,139 +1,129 @@
-# FarmSim AI — Smart Agriculture Simulator
+# FarmSim AI Agriculture Simulator
 
-A virtual farm simulator that lets farmers create farms, configure zones, run what-if scenarios, and view AI-powered simulation results.
+FarmSim is a working full-stack virtual-farm application. A farmer creates a farm, adds crop zones and their conditions, runs baseline or what-if scenarios, receives a simulated daily timeline, compares runs, and gets an agricultural explanation.
 
-![React](https://img.shields.io/badge/React-18-blue)
-![TypeScript](https://img.shields.io/badge/TypeScript-5-blue)
-![Vite](https://img.shields.io/badge/Vite-5-purple)
-![TailwindCSS](https://img.shields.io/badge/Tailwind-3-blue)
+```
+React frontend → FastAPI → AI scenario service → simulation_engine.simulate_farm()
+              ← persisted results ← Firebase Cloud Firestore (or SQLite fallback)
+```
 
-## Features
+The API's canonical contract is `snake_case`; the existing React client translates it once in [`src/services/api.ts`](src/services/api.ts) to keep the UI's camelCase view models stable.
 
-- **Farm Creation** — Create farms with name, location, area, and coordinates
-- **Zone Builder** — Divide your farm into zones, assign crops, configure soil and environment
-- **Farm Dashboard** — View real-time metrics: soil moisture, crop health, disease risk, water usage
-- **What-If Scenarios** — Simulate drought, heatwave, pest outbreak, and more
-- **Simulation Results** — Timeline charts for soil moisture, crop health, disease risk, yield
-- **Scenario Comparison** — Compare multiple simulations side-by-side
-- **AI Explanations** — Get natural language analysis from the backend AI
+## Firebase Cloud Firestore Integration (`farmsim-e8973`)
 
-## Quick Start
+FarmSim AI uses **Firebase Cloud Firestore** (project ID: `farmsim-e8973`, region `asia-south1`) as its primary real database persistence layer.
 
-### Prerequisites
+### 1. Service Account Credential Setup
+1. Generate a Firebase Admin SDK service account JSON key file in the Firebase Console:
+   - Go to **Project Settings** → **Service accounts**
+   - Click **Generate new private key**
+2. Place the generated JSON key file inside the `backend` folder as `firebase-service-account.json`:
+   ```
+   c:\Users\Manik\OneDrive\Desktop\Farmsim\backend\firebase-service-account.json
+   ```
+   *(Note: This credential file is automatically ignored in `.gitignore` and must never be committed to Git).*
 
-- Node.js 18+ and npm
+### 2. Backend `.env` Configuration
+Configure `backend/.env` (copy from `backend/.env.example`):
 
-### Install
+```env
+STORAGE_MODE=firebase
+DATABASE_URL=firestore://
+FIREBASE_PROJECT_ID=farmsim-e8973
+FIREBASE_CREDENTIALS_FILE=./firebase-service-account.json
+
+AI_API_KEY=
+AI_MODEL=gpt-4.1-mini
+AI_API_BASE_URL=https://api.openai.com/v1
+CORS_ORIGINS=http://localhost:3000,http://127.0.0.1:3000
+```
+
+### 3. Firestore Collections Schema
+The backend stores documents in the following Cloud Firestore collections:
+- **`farms/{farm_id}`**: Farm entity (`farm_id`, `name`, `location`, `area_acres`, `number_of_zones`, `latitude`, `longitude`, `created_at`, `updated_at`).
+- **`zones/{zone_id}`**: Crop field entity (`zone_id`, `farm_id`, `name`, `area_acres`, `crop`, `soil`, `growth_stage`, `irrigation`, `soil_moisture`, `temperature`, `humidity`, `rainfall`, `nitrogen`, `phosphorus`, `potassium`, `health_score`, `disease_risk`).
+- **`scenarios/{scenario_id}`**: What-if scenario (`scenario_id`, `farm_id`, `name`, `duration_days`, `target_zones`, `changes`, `scenario_type`, `created_at`).
+- **`simulations/{simulation_id}`**: Simulation metadata and history (`simulation_id`, `farm_id`, `scenario_id`, `scenario_name`, `timeline`, `summary`, `created_at`).
+- **`simulation_results/{simulation_id}`**: Full simulation result dataset with baseline and projected timelines, summaries, and AI explanations.
+
+---
+
+## Run locally
+
+Prerequisites: Node.js 18+ and Python 3.11+.
+
+### Start Backend (FastAPI + Firebase Firestore)
+
+```bash
+cd backend
+python -m venv .venv
+# PowerShell
+.\.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+Copy-Item .env.example .env
+python run.py
+```
+
+The FastAPI service starts at `http://localhost:8000`. Interactive OpenAPI documentation is at `http://localhost:8000/docs`.
+
+### Verify Firebase Connection
+
+Check health status at `http://localhost:8000/api/health`:
+```json
+{
+  "status": "ok",
+  "storage": "firebase",
+  "firestore_connected": true,
+  "project_id": "farmsim-e8973"
+}
+```
+
+### Start Frontend (React + Vite)
+
+In a second terminal, start the frontend:
 
 ```bash
 npm install
-```
-
-### Configure
-
-Copy the environment file and adjust the API URL:
-
-```bash
-cp .env.example .env
-```
-
-Edit `.env`:
-```
-VITE_API_URL=http://localhost:8000
-VITE_APP_NAME=FarmSim AI
-```
-
-### Run (Development)
-
-```bash
+Copy-Item .env.example .env
 npm run dev
 ```
 
-The app starts at **http://localhost:3000**
+Open `http://localhost:3000`. `VITE_API_URL` defaults to `http://localhost:8000`.
 
-### Build (Production)
+---
 
+## API Summary
+
+| Method | Endpoint | Description |
+| --- | --- | --- |
+| `GET` | `/health` | Verify server & Firestore connection status. |
+| `POST` | `/farms` | Create a new farm in Firestore. |
+| `GET` | `/farms`, `/farms/{farm_id}` | Retrieve farms and zones from Firestore. |
+| `PUT` | `/farms/{farm_id}` | Update farm metadata. |
+| `POST` | `/farms/{farm_id}/zones` | Add a crop zone. |
+| `PUT` | `/farms/{farm_id}/zones/{zone_id}` | Update zone conditions. |
+| `POST` | `/scenarios` | Store a structured what-if scenario in Firestore. |
+| `GET` | `/scenarios/{scenario_id}`, `/farms/{farm_id}/scenarios` | Retrieve scenarios from Firestore. |
+| `POST` | `/simulate` | Load farm & scenario from Firestore, call `simulate_farm()`, store results in Firestore. |
+| `GET` | `/simulation/{simulation_id}` | Retrieve persisted timeline & summary from Firestore. |
+| `GET` | `/farms/{farm_id}/simulations` | List simulation runs for a farm. |
+| `POST` | `/compare` | Compare simulation runs from Firestore. |
+| `POST` | `/ai/analyze-risk` | Assess water, heat, disease, and nutrient risks. |
+| `POST` | `/ai/parse-scenario` | Translate natural language query to scenario payload. |
+| `POST` | `/ai/suggest-scenarios` | Return risk-targeted quick-test scenarios. |
+| `POST` | `/ai/explain-result` | Return structured recommendations & trade-offs. |
+
+---
+
+## Verification & Testing
+
+Run backend test suite:
+```bash
+cd backend
+.venv\Scripts\python.exe -m pytest tests/ --basetemp=temp_pytest_dir
+```
+
+Build production bundle:
 ```bash
 npm run build
-npm run preview
 ```
-
-## Project Structure
-
-```
-src/
-├── App.tsx                  # Router and page routes
-├── main.tsx                 # Entry point
-├── index.css                # Tailwind + custom styles
-├── types/
-│   └── index.ts             # TypeScript interfaces and constants
-├── services/
-│   ├── api.ts               # Centralized API client (Axios)
-│   └── mockData.ts          # Mock data fallback (development only)
-├── components/
-│   ├── layout/
-│   │   └── Layout.tsx       # App shell with navigation
-│   └── shared/
-│       ├── LoadingSpinner.tsx
-│       ├── ErrorDisplay.tsx
-│       ├── EmptyState.tsx
-│       ├── MetricCard.tsx
-│       └── StatusBadge.tsx
-└── pages/
-    ├── LandingPage.tsx           # Home / farm list
-    ├── FarmCreatePage.tsx        # Farm creation form
-    ├── FarmBuilderPage.tsx       # Zone builder
-    ├── FarmDashboardPage.tsx     # Farm overview dashboard
-    ├── ScenarioBuilderPage.tsx   # What-if scenario builder
-    ├── SimulationResultsPage.tsx # Simulation charts & AI analysis
-    └── ScenarioComparisonPage.tsx # Compare simulations
-```
-
-## API Integration
-
-The frontend expects these backend endpoints:
-
-| Method | Endpoint                          | Description          |
-|--------|-----------------------------------|----------------------|
-| POST   | `/api/farms`                      | Create a farm        |
-| GET    | `/api/farms`                      | List all farms       |
-| GET    | `/api/farms/{id}`                 | Get farm details     |
-| POST   | `/api/farms/{id}/zones`           | Create a zone        |
-| PUT    | `/api/farms/{id}/zones/{zone_id}` | Update a zone        |
-| POST   | `/api/simulate`                   | Run simulation       |
-| GET    | `/api/simulation/{id}`            | Get simulation result|
-| GET    | `/api/farms/{id}/simulations`     | List simulations     |
-| POST   | `/api/scenarios`                  | Create scenario      |
-| POST   | `/api/compare`                    | Compare simulations  |
-
-All API calls go through `src/services/api.ts`. The base URL is configurable via the `VITE_API_URL` environment variable.
-
-## Mock Mode
-
-When the backend is unavailable, the app falls back to localStorage-based mock data. This is controlled by the `MOCK_ENABLED` flag in `src/services/mockData.ts`. Set it to `false` to disable mock fallback.
-
-## Tech Stack
-
-- **React 18** — UI framework
-- **TypeScript 5** — Type safety
-- **Vite 5** — Build tool
-- **Tailwind CSS 3** — Utility-first styling
-- **React Router 6** — Client-side routing
-- **Axios** — HTTP client
-- **Recharts** — Data visualization
-- **Lucide React** — Icons
-- **React Hot Toast** — Notifications
-
-## Screens
-
-1. **Landing Page** — Hero, features, existing farms
-2. **Farm Create** — Name, location, area, zones form
-3. **Farm Builder** — Visual zone grid, crop/soil/environment config
-4. **Farm Dashboard** — Metrics cards, crop distribution, zone cards
-5. **Scenario Builder** — Presets, NL input, zone selection
-6. **Simulation Results** — Timeline charts, data table, AI analysis
-7. **Scenario Comparison** — Multi-simulation chart comparison
-
-## License
-
-Built for hackathon demonstration purposes.

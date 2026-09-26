@@ -1,3 +1,5 @@
+@import 'leaflet/dist/leaflet.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -80,3 +82,79 @@
     @apply bg-clip-text text-transparent bg-gradient-to-r from-farm-green to-farm-green-light;
   }
 }
+
+/* Atmospheric Weather Visual Overlays for Map */
+@keyframes rainfall {
+  0% {
+    background-position: 0% 0%;
+  }
+  100% {
+    background-position: 15% 100%;
+  }
+}
+
+.animate-rainfall-light {
+  background-image: repeating-linear-gradient(
+    105deg,
+    transparent,
+    transparent 22px,
+    rgba(186, 230, 253, 0.45) 23px,
+    transparent 24px
+  );
+  background-size: 90px 140px;
+  animation: rainfall 1.1s linear infinite;
+}
+
+.animate-rainfall-heavy {
+  background-image: repeating-linear-gradient(
+    115deg,
+    transparent,
+    transparent 11px,
+    rgba(125, 211, 252, 0.65) 12px,
+    transparent 14px
+  );
+  background-size: 60px 80px;
+  animation: rainfall 0.55s linear infinite;
+}
+
+@keyframes heatShimmer {
+  0%, 100% {
+    opacity: 0.16;
+    transform: scale(1) translateY(0);
+  }
+  50% {
+    opacity: 0.28;
+    transform: scale(1.01) translateY(-2px);
+  }
+}
+
+.animate-heat-shimmer {
+  animation: heatShimmer 4s ease-in-out infinite;
+}
+
+@keyframes sunPulse {
+  0%, 100% {
+    opacity: 0.12;
+  }
+  50% {
+    opacity: 0.22;
+  }
+}
+
+.animate-sun-pulse {
+  animation: sunPulse 6s ease-in-out infinite;
+}
+
+@keyframes waterRipple {
+  0%, 100% {
+    opacity: 0.22;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
+.animate-water-ripple {
+  animation: waterRipple 4.5s ease-in-out infinite;
+}
+
