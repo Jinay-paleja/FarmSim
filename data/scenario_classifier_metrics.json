@@ -1,0 +1,318 @@
+{
+  "dataset_total": 803,
+  "train_samples": 642,
+  "test_samples": 161,
+  "num_classes": 13,
+  "classes": [
+    "COMBINED",
+    "DISEASE_OUTBREAK",
+    "FERTILIZER_CHANGE",
+    "HEATWAVE",
+    "IRRIGATION_DECREASE",
+    "IRRIGATION_FAILURE",
+    "IRRIGATION_INCREASE",
+    "NUTRIENT_DEFICIENCY",
+    "PEST_OUTBREAK",
+    "RAIN_INCREASE",
+    "RAIN_REDUCTION",
+    "SOIL_MOISTURE_CHANGE",
+    "TEMPERATURE_INCREASE"
+  ],
+  "metrics": {
+    "accuracy": 0.8633540372670807,
+    "macro_precision": 0.8705205051358897,
+    "macro_recall": 0.8670752324598479,
+    "macro_f1": 0.8650278518621273,
+    "weighted_f1": 0.8622474351149144
+  },
+  "classification_report": {
+    "COMBINED": {
+      "precision": 1.0,
+      "recall": 0.6923076923076923,
+      "f1-score": 0.8181818181818182,
+      "support": 13.0
+    },
+    "DISEASE_OUTBREAK": {
+      "precision": 0.8571428571428571,
+      "recall": 1.0,
+      "f1-score": 0.9230769230769231,
+      "support": 12.0
+    },
+    "FERTILIZER_CHANGE": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1-score": 1.0,
+      "support": 12.0
+    },
+    "HEATWAVE": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1-score": 1.0,
+      "support": 12.0
+    },
+    "IRRIGATION_DECREASE": {
+      "precision": 0.7142857142857143,
+      "recall": 0.8333333333333334,
+      "f1-score": 0.7692307692307693,
+      "support": 12.0
+    },
+    "IRRIGATION_FAILURE": {
+      "precision": 0.9230769230769231,
+      "recall": 1.0,
+      "f1-score": 0.96,
+      "support": 12.0
+    },
+    "IRRIGATION_INCREASE": {
+      "precision": 0.75,
+      "recall": 0.6923076923076923,
+      "f1-score": 0.72,
+      "support": 13.0
+    },
+    "NUTRIENT_DEFICIENCY": {
+      "precision": 1.0,
+      "recall": 0.9166666666666666,
+      "f1-score": 0.9565217391304348,
+      "support": 12.0
+    },
+    "PEST_OUTBREAK": {
+      "precision": 0.8461538461538461,
+      "recall": 0.9166666666666666,
+      "f1-score": 0.88,
+      "support": 12.0
+    },
+    "RAIN_INCREASE": {
+      "precision": 0.6363636363636364,
+      "recall": 0.5833333333333334,
+      "f1-score": 0.6086956521739131,
+      "support": 12.0
+    },
+    "RAIN_REDUCTION": {
+      "precision": 0.6666666666666666,
+      "recall": 0.7142857142857143,
+      "f1-score": 0.6896551724137931,
+      "support": 14.0
+    },
+    "SOIL_MOISTURE_CHANGE": {
+      "precision": 0.9230769230769231,
+      "recall": 1.0,
+      "f1-score": 0.96,
+      "support": 12.0
+    },
+    "TEMPERATURE_INCREASE": {
+      "precision": 1.0,
+      "recall": 0.9230769230769231,
+      "f1-score": 0.96,
+      "support": 13.0
+    },
+    "accuracy": 0.8633540372670807,
+    "macro avg": {
+      "precision": 0.8705205051358897,
+      "recall": 0.8670752324598479,
+      "f1-score": 0.8650278518621273,
+      "support": 161.0
+    },
+    "weighted avg": {
+      "precision": 0.8688480256803239,
+      "recall": 0.8633540372670807,
+      "f1-score": 0.8622474351149144,
+      "support": 161.0
+    }
+  },
+  "confusion_matrix": [
+    [
+      9,
+      1,
+      0,
+      0,
+      0,
+      1,
+      0,
+      0,
+      1,
+      0,
+      1,
+      0,
+      0
+    ],
+    [
+      0,
+      12,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    [
+      0,
+      0,
+      12,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    [
+      0,
+      0,
+      0,
+      12,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    [
+      0,
+      0,
+      0,
+      0,
+      10,
+      0,
+      2,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    [
+      0,
+      0,
+      0,
+      0,
+      0,
+      12,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    [
+      0,
+      0,
+      0,
+      0,
+      4,
+      0,
+      9,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      11,
+      0,
+      0,
+      0,
+      1,
+      0
+    ],
+    [
+      0,
+      1,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      11,
+      0,
+      0,
+      0,
+      0
+    ],
+    [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      1,
+      0,
+      0,
+      7,
+      4,
+      0,
+      0
+    ],
+    [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      1,
+      3,
+      10,
+      0,
+      0
+    ],
+    [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      12,
+      0
+    ],
+    [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      1,
+      0,
+      0,
+      12
+    ]
+  ]
+}

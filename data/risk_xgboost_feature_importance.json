@@ -1,0 +1,362 @@
+{
+  "water_stress": {
+    "top_encoded_features": [
+      {
+        "feature": "soil_moisture",
+        "importance": 0.1538
+      },
+      {
+        "feature": "crop_Rice",
+        "importance": 0.0645
+      },
+      {
+        "feature": "crop_Sugarcane",
+        "importance": 0.0594
+      },
+      {
+        "feature": "crop_Pigeon Pea",
+        "importance": 0.0498
+      },
+      {
+        "feature": "crop_Pearl Millet",
+        "importance": 0.049
+      },
+      {
+        "feature": "crop_Sorghum",
+        "importance": 0.0444
+      },
+      {
+        "feature": "growth_stage_Maturity",
+        "importance": 0.0419
+      },
+      {
+        "feature": "crop_Chickpea",
+        "importance": 0.0407
+      },
+      {
+        "feature": "crop_Green Gram",
+        "importance": 0.0387
+      },
+      {
+        "feature": "crop_Potato",
+        "importance": 0.038
+      }
+    ],
+    "raw_feature_importance": [
+      {
+        "raw_feature": "crop",
+        "aggregated_importance": 0.5323
+      },
+      {
+        "raw_feature": "soil_moisture",
+        "aggregated_importance": 0.1538
+      },
+      {
+        "raw_feature": "growth_stage",
+        "aggregated_importance": 0.092
+      },
+      {
+        "raw_feature": "soil",
+        "aggregated_importance": 0.0834
+      },
+      {
+        "raw_feature": "irrigation",
+        "aggregated_importance": 0.062
+      },
+      {
+        "raw_feature": "rainfall",
+        "aggregated_importance": 0.037
+      },
+      {
+        "raw_feature": "humidity",
+        "aggregated_importance": 0.0126
+      },
+      {
+        "raw_feature": "temperature",
+        "aggregated_importance": 0.0103
+      },
+      {
+        "raw_feature": "nitrogen",
+        "aggregated_importance": 0.0057
+      },
+      {
+        "raw_feature": "phosphorus",
+        "aggregated_importance": 0.0056
+      },
+      {
+        "raw_feature": "potassium",
+        "aggregated_importance": 0.0053
+      }
+    ]
+  },
+  "heat_stress": {
+    "top_encoded_features": [
+      {
+        "feature": "crop_Potato",
+        "importance": 0.142
+      },
+      {
+        "feature": "crop_Wheat",
+        "importance": 0.1156
+      },
+      {
+        "feature": "crop_Mustard",
+        "importance": 0.1088
+      },
+      {
+        "feature": "temperature",
+        "importance": 0.086
+      },
+      {
+        "feature": "crop_Chickpea",
+        "importance": 0.0666
+      },
+      {
+        "feature": "crop_Sorghum",
+        "importance": 0.0503
+      },
+      {
+        "feature": "crop_Sugarcane",
+        "importance": 0.0502
+      },
+      {
+        "feature": "crop_Cotton",
+        "importance": 0.0475
+      },
+      {
+        "feature": "crop_Pearl Millet",
+        "importance": 0.0411
+      },
+      {
+        "feature": "crop_Soybean",
+        "importance": 0.0391
+      }
+    ],
+    "raw_feature_importance": [
+      {
+        "raw_feature": "crop",
+        "aggregated_importance": 0.8181
+      },
+      {
+        "raw_feature": "temperature",
+        "aggregated_importance": 0.086
+      },
+      {
+        "raw_feature": "growth_stage",
+        "aggregated_importance": 0.0252
+      },
+      {
+        "raw_feature": "soil",
+        "aggregated_importance": 0.0218
+      },
+      {
+        "raw_feature": "soil_moisture",
+        "aggregated_importance": 0.0145
+      },
+      {
+        "raw_feature": "irrigation",
+        "aggregated_importance": 0.0144
+      },
+      {
+        "raw_feature": "humidity",
+        "aggregated_importance": 0.0081
+      },
+      {
+        "raw_feature": "rainfall",
+        "aggregated_importance": 0.0032
+      },
+      {
+        "raw_feature": "potassium",
+        "aggregated_importance": 0.0031
+      },
+      {
+        "raw_feature": "nitrogen",
+        "aggregated_importance": 0.0028
+      },
+      {
+        "raw_feature": "phosphorus",
+        "aggregated_importance": 0.0027
+      }
+    ]
+  },
+  "disease_risk": {
+    "top_encoded_features": [
+      {
+        "feature": "rainfall",
+        "importance": 0.2587
+      },
+      {
+        "feature": "humidity",
+        "importance": 0.1961
+      },
+      {
+        "feature": "temperature",
+        "importance": 0.0651
+      },
+      {
+        "feature": "irrigation_Sprinkler",
+        "importance": 0.044
+      },
+      {
+        "feature": "soil_moisture",
+        "importance": 0.0398
+      },
+      {
+        "feature": "growth_stage_Grain Filling",
+        "importance": 0.0333
+      },
+      {
+        "feature": "growth_stage_Seedling",
+        "importance": 0.0306
+      },
+      {
+        "feature": "growth_stage_Vegetative",
+        "importance": 0.0263
+      },
+      {
+        "feature": "growth_stage_Flowering",
+        "importance": 0.024
+      },
+      {
+        "feature": "growth_stage_Maturity",
+        "importance": 0.0192
+      }
+    ],
+    "raw_feature_importance": [
+      {
+        "raw_feature": "rainfall",
+        "aggregated_importance": 0.2587
+      },
+      {
+        "raw_feature": "humidity",
+        "aggregated_importance": 0.1961
+      },
+      {
+        "raw_feature": "growth_stage",
+        "aggregated_importance": 0.1335
+      },
+      {
+        "raw_feature": "crop",
+        "aggregated_importance": 0.1211
+      },
+      {
+        "raw_feature": "soil",
+        "aggregated_importance": 0.0801
+      },
+      {
+        "raw_feature": "irrigation",
+        "aggregated_importance": 0.0785
+      },
+      {
+        "raw_feature": "temperature",
+        "aggregated_importance": 0.0651
+      },
+      {
+        "raw_feature": "soil_moisture",
+        "aggregated_importance": 0.0398
+      },
+      {
+        "raw_feature": "nitrogen",
+        "aggregated_importance": 0.0091
+      },
+      {
+        "raw_feature": "phosphorus",
+        "aggregated_importance": 0.0091
+      },
+      {
+        "raw_feature": "potassium",
+        "aggregated_importance": 0.0089
+      }
+    ]
+  },
+  "nutrient_risk": {
+    "top_encoded_features": [
+      {
+        "feature": "nitrogen",
+        "importance": 0.4058
+      },
+      {
+        "feature": "potassium",
+        "importance": 0.0679
+      },
+      {
+        "feature": "phosphorus",
+        "importance": 0.0553
+      },
+      {
+        "feature": "crop_Groundnut",
+        "importance": 0.0431
+      },
+      {
+        "feature": "crop_Soybean",
+        "importance": 0.0421
+      },
+      {
+        "feature": "crop_Pigeon Pea",
+        "importance": 0.041
+      },
+      {
+        "feature": "crop_Chickpea",
+        "importance": 0.0405
+      },
+      {
+        "feature": "crop_Green Gram",
+        "importance": 0.0399
+      },
+      {
+        "feature": "growth_stage_Vegetative",
+        "importance": 0.026
+      },
+      {
+        "feature": "crop_Sugarcane",
+        "importance": 0.011
+      }
+    ],
+    "raw_feature_importance": [
+      {
+        "raw_feature": "nitrogen",
+        "aggregated_importance": 0.4058
+      },
+      {
+        "raw_feature": "crop",
+        "aggregated_importance": 0.2981
+      },
+      {
+        "raw_feature": "potassium",
+        "aggregated_importance": 0.0679
+      },
+      {
+        "raw_feature": "soil",
+        "aggregated_importance": 0.0566
+      },
+      {
+        "raw_feature": "phosphorus",
+        "aggregated_importance": 0.0553
+      },
+      {
+        "raw_feature": "growth_stage",
+        "aggregated_importance": 0.0547
+      },
+      {
+        "raw_feature": "irrigation",
+        "aggregated_importance": 0.0337
+      },
+      {
+        "raw_feature": "soil_moisture",
+        "aggregated_importance": 0.0074
+      },
+      {
+        "raw_feature": "humidity",
+        "aggregated_importance": 0.007
+      },
+      {
+        "raw_feature": "temperature",
+        "aggregated_importance": 0.0068
+      },
+      {
+        "raw_feature": "rainfall",
+        "aggregated_importance": 0.0067
+      }
+    ]
+  }
+}
