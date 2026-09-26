@@ -181,12 +181,14 @@ def create_api_router(
         return UserProfile.model_validate(user.model_dump()).model_copy(update={"session_token": token})
 
     def owned_farm(farm_id: str, request: Request) -> dict[str, Any]:
+        if not farm_id or farm_id in ("undefined", "null", ""):
+            raise HTTPException(status_code=400, detail="A valid farm ID must be provided")
         farm = build_farm(repository, farm_id)
         if not farm:
             raise not_found("Farm", farm_id)
         current_user = session_user(request)
         owner_id = farm.get("owner_id") or farm.get("ownerId")
-        if current_user and owner_id != current_user:
+        if current_user and owner_id and owner_id != current_user:
             # Do not reveal whether another farmer's farm ID exists.
             raise not_found("Farm", farm_id)
         return farm
@@ -382,26 +384,73 @@ def create_api_router(
         now = utc_now()
         current_user = session_user(request)
         farm_id = new_id("farm")
-        farm = Farm(
-            farm_id=farm_id,
-            # In production the owner always comes from the authenticated
-            # session, never from a mutable browser form field.
-            owner_id=current_user or payload.owner_id,
-            name=payload.name,
-            location=payload.location,
-            area_acres=payload.area_acres,
-            latitude=payload.latitude or 30.901,
-            longitude=payload.longitude or 75.857,
-            number_of_zones=payload.number_of_zones,
-            zones=[],
-            created_at=now,
-            updated_at=now,
-        )
+        owner_id = current_user or payload.owner_id
+        
+        farm_dict: dict[str, Any] = {
+            "farm_id": farm_id,
+            "id": farm_id,
+            "owner_id": owner_id,
+            "ownerId": owner_id,
+            "name": payload.name,
+            "location": payload.location,
+            "location_name": payload.location_name or payload.location,
+            "location_details": payload.location_details,
+            "area_acres": payload.area_acres,
+            "area": payload.area_acres,
+            "latitude": payload.latitude if payload.latitude is not None else 30.901,
+            "longitude": payload.longitude if payload.longitude is not None else 75.857,
+            "boundary": payload.boundary,
+            "boundary_points": payload.boundary_points,
+            "boundaryGeoJson": payload.boundaryGeoJson,
+            "mapped_area": payload.mapped_area,
+            "total_area": payload.total_area or payload.area_acres,
+            "number_of_zones": payload.number_of_zones,
+            "zones": [],
+            "created_at": now.isoformat(),
+            "updated_at": now.isoformat(),
+        }
+
+        # Initialize default zone if crop/soil provided
+        initial_zones = []
+        if payload.crop or payload.soil:
+            z_id = new_id("zone")
+            zone_data = {
+                "zone_id": z_id,
+                "id": z_id,
+                "farm_id": farm_id,
+                "farmId": farm_id,
+                "name": f"{payload.name} Main Field",
+                "area_acres": payload.area_acres,
+                "area": payload.area_acres,
+                "crop": payload.crop or "wheat",
+                "soil": payload.soil or "loam",
+                "soil_type": payload.soil or "loam",
+                "soilType": payload.soil or "loam",
+                "growth_stage": payload.growthStage or "vegetative",
+                "growthStage": payload.growthStage or "vegetative",
+                "irrigation": payload.irrigation or "drip",
+                "irrigation_method": payload.irrigation or "drip",
+                "irrigationMethod": payload.irrigation or "drip",
+                "soil_moisture": payload.soilMoisture if payload.soilMoisture is not None else 45.0,
+                "soilMoisture": payload.soilMoisture if payload.soilMoisture is not None else 45.0,
+                "temperature": payload.temperature if payload.temperature is not None else 24.0,
+                "humidity": payload.humidity if payload.humidity is not None else 60.0,
+                "rainfall": payload.rainfall if payload.rainfall is not None else 15.0,
+                "nitrogen": payload.nitrogen if payload.nitrogen is not None else 60.0,
+                "phosphorus": payload.phosphorus if payload.phosphorus is not None else 40.0,
+                "potassium": payload.potassium if payload.potassium is not None else 40.0,
+                "health_score": 85.0,
+                "disease_risk": 15.0,
+            }
+            initial_zones.append(zone_data)
+            repository.create_zone(zone_data)
+
+        farm_dict["zones"] = initial_zones
         try:
-            repository.create_farm(farm.model_dump(mode="json"))
+            repository.create_farm(farm_dict)
         except RepositoryError as exc:
             raise HTTPException(status_code=409, detail=str(exc)) from exc
-        return farm
+        return Farm.model_validate(farm_dict)
 
     @router.get("/farms", response_model=list[Farm])
     def list_farms(request: Request, owner_id: str | None = None) -> list[Farm]:
@@ -409,7 +458,8 @@ def create_api_router(
         requested_owner = current_user or owner_id
         farms = []
         for document in repository.list_farms():
-            if requested_owner and document.get("owner_id") != requested_owner and document.get("ownerId") != requested_owner:
+            doc_owner = document.get("owner_id") or document.get("ownerId")
+            if requested_owner and doc_owner and doc_owner != requested_owner:
                 continue
             document["zones"] = repository.list_zones(document["farm_id"])
             farms.append(Farm.model_validate(document))
@@ -417,15 +467,25 @@ def create_api_router(
 
     @router.get("/farms/{farm_id}", response_model=Farm)
     def get_farm(farm_id: str, request: Request) -> Farm:
-        return Farm.model_validate(owned_farm(farm_id, request))
+        if not farm_id or farm_id in ("undefined", "null", ""):
+            raise HTTPException(status_code=400, detail="A valid farm ID must be provided")
+        doc = owned_farm(farm_id, request)
+        if "zones" not in doc or not doc["zones"]:
+            doc["zones"] = repository.list_zones(farm_id)
+        return Farm.model_validate(doc)
 
     @router.put("/farms/{farm_id}", response_model=Farm)
     def update_farm(farm_id: str, payload: FarmUpdate, request: Request) -> Farm:
         owned_farm(farm_id, request)
         updates = payload.model_dump(exclude_unset=True)
         updates["updated_at"] = utc_now().isoformat()
+        if "area_acres" in updates and "area" not in updates:
+            updates["area"] = updates["area_acres"]
         repository.update_farm(farm_id, updates)
-        return Farm.model_validate(owned_farm(farm_id, request))
+        updated_doc = owned_farm(farm_id, request)
+        if "zones" not in updated_doc or not updated_doc["zones"]:
+            updated_doc["zones"] = repository.list_zones(farm_id)
+        return Farm.model_validate(updated_doc)
 
     @router.delete("/farms/{farm_id}", status_code=204)
     def delete_farm(farm_id: str, request: Request) -> None:

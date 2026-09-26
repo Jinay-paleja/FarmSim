@@ -28,12 +28,14 @@ import type {
 } from '../types';
 import { SCENARIO_PRESETS, CROP_EMOJIS } from '../types';
 import { useFarmWeather } from '../hooks/useFarmWeather';
+import { useFarmContext } from '../context/FarmContext';
 import { WHAT_IF_PRESETS } from '../services/simulationEngine';
 
 export default function ScenarioBuilderPage() {
   const { farmId } = useParams<{ farmId: string }>();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const { farms } = useFarmContext();
 
   const [farm, setFarm] = useState<Farm | null>(null);
   const [loading, setLoading] = useState(true);
@@ -97,31 +99,34 @@ export default function ScenarioBuilderPage() {
   }, [searchParams]);
 
   useEffect(() => {
+    if (!farmId || farmId === 'undefined' || farmId === 'null') {
+      if (farms.length > 0 && farms[0].id && farms[0].id !== 'undefined') {
+        navigate(`/farms/${farms[0].id}/scenarios/new`, { replace: true });
+        return;
+      }
+      setLoading(false);
+      return;
+    }
     loadFarm();
-  }, [farmId]);
+  }, [farmId, farms, navigate]);
 
   const loadFarm = async () => {
-    if (!farmId) return;
+    if (!farmId || farmId === 'undefined' || farmId === 'null') {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     setError(null);
     try {
-      let farmData: Farm;
-      try {
-        farmData = await farmApi.get(farmId);
-      } catch {
-        if (isMockEnabled()) {
-          const stored = JSON.parse(localStorage.getItem('farms') || '[]') as Farm[];
-          const found = stored.find((f) => f.id === farmId);
-          if (!found) throw new Error('Farm not found');
-          farmData = found;
-        } else {
-          throw new Error('Failed to load farm');
-        }
-      }
+      const farmData = await farmApi.get(farmId);
       setFarm(farmData);
       setAffectedZones(farmData.zones.map((z) => z.id));
     } catch (err: any) {
-      setError(err?.message || 'Failed to load farm');
+      if (err?.status === 404 || err?.message?.includes('not found')) {
+        setError('This farm could not be found. It may have been deleted.');
+      } else {
+        setError(err?.message || "We couldn't load your farm data. Please try again.");
+      }
     } finally {
       setLoading(false);
     }

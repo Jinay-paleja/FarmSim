@@ -57,35 +57,114 @@ apiClient.interceptors.response.use(
 );
 
 // ============================================================
+// ============================================================
+// Normalization Helpers (ensures canonical id, farmId, ownerId)
+// ============================================================
+
+export function normalizeZone(raw: any): Zone {
+  if (!raw) return raw;
+  const canonicalId = String(raw.zoneId || raw.zone_id || raw.id || '');
+  const canonicalFarmId = String(raw.farmId || raw.farm_id || '');
+  return {
+    ...raw,
+    id: canonicalId,
+    zoneId: canonicalId,
+    zone_id: canonicalId,
+    farmId: canonicalFarmId,
+    farm_id: canonicalFarmId,
+    name: raw.name || 'Field Plot',
+    area: Number(raw.area ?? raw.area_acres ?? 5),
+    crop: raw.crop || 'wheat',
+    soilType: raw.soilType || raw.soil_type || 'loam',
+    growthStage: raw.growthStage || raw.growth_stage || 'vegetative',
+    irrigationMethod: raw.irrigationMethod || raw.irrigation_method || 'drip',
+    soilMoisture: Number(raw.soilMoisture ?? raw.soil_moisture ?? 45),
+    temperature: Number(raw.temperature ?? 24),
+    humidity: Number(raw.humidity ?? 60),
+    rainfall: Number(raw.rainfall ?? 15),
+    nitrogen: Number(raw.nitrogen ?? 60),
+    phosphorus: Number(raw.phosphorus ?? 40),
+    potassium: Number(raw.potassium ?? 40),
+    healthScore: Number(raw.healthScore ?? raw.health_score ?? 80),
+    diseaseRisk: Number(raw.diseaseRisk ?? raw.disease_risk ?? 15),
+  };
+}
+
+export function normalizeFarm(raw: any): Farm {
+  if (!raw) return raw;
+  const canonicalId = String(raw.farmId || raw.farm_id || raw.id || '');
+  const canonicalOwner = String(raw.ownerId || raw.owner_id || '');
+  const canonicalArea = Number(raw.area ?? raw.area_acres ?? raw.total_area ?? 10);
+  const canonicalLat = raw.latitude !== undefined && raw.latitude !== null ? Number(raw.latitude) : undefined;
+  const canonicalLng = raw.longitude !== undefined && raw.longitude !== null ? Number(raw.longitude) : undefined;
+
+  let boundary = raw.boundary;
+  if (!boundary && raw.boundaryGeoJson?.coordinates?.[0]) {
+    boundary = raw.boundaryGeoJson.coordinates[0].map(([lng, lat]: [number, number]) => [lat, lng]);
+  } else if (!boundary && Array.isArray(raw.boundary_points)) {
+    boundary = raw.boundary_points.map((p: any) => [p.latitude, p.longitude]);
+  }
+
+  const zones = Array.isArray(raw.zones) ? raw.zones.map(normalizeZone) : [];
+
+  return {
+    ...raw,
+    id: canonicalId,
+    farmId: canonicalId,
+    farm_id: canonicalId,
+    ownerId: canonicalOwner,
+    owner_id: canonicalOwner,
+    name: raw.name || 'Unnamed Farm',
+    location: raw.location_name || raw.location || raw.displayName || 'Selected Location',
+    area: canonicalArea,
+    area_acres: canonicalArea,
+    latitude: canonicalLat,
+    longitude: canonicalLng,
+    boundary,
+    boundary_points: boundary
+      ? boundary.map(([lat, lng]: [number, number]) => ({ latitude: lat, longitude: lng }))
+      : raw.boundary_points,
+    zones,
+  };
+}
+
+// ============================================================
 // Farm API
 // ============================================================
 
 export const farmApi = {
   create: async (data: FarmCreateInput): Promise<Farm> => {
-    const response = await apiClient.post<Farm>('/farms', data);
-    return response.data;
+    const response = await apiClient.post<any>('/farms', data);
+    return normalizeFarm(response.data);
   },
 
   get: async (farmId: string): Promise<Farm> => {
-    const response = await apiClient.get<Farm>(`/farms/${farmId}`);
-    return response.data;
+    if (!farmId || farmId === 'undefined' || farmId === 'null') {
+      throw new Error('A valid farm ID must be provided to load farm data.');
+    }
+    const response = await apiClient.get<any>(`/farms/${farmId}`);
+    return normalizeFarm(response.data);
   },
 
   list: async (): Promise<Farm[]> => {
-    const response = await apiClient.get<Farm[]>('/farms');
-    return response.data;
+    const response = await apiClient.get<any[]>('/farms');
+    return Array.isArray(response.data) ? response.data.map(normalizeFarm) : [];
   },
 
   update: async (farmId: string, data: Partial<Farm>): Promise<Farm> => {
-    const response = await apiClient.put<Farm>(`/farms/${farmId}`, data);
-    return response.data;
+    if (!farmId || farmId === 'undefined' || farmId === 'null') {
+      throw new Error('Cannot update farm without a valid farm ID.');
+    }
+    const response = await apiClient.put<any>(`/farms/${farmId}`, data);
+    return normalizeFarm(response.data);
   },
 
   delete: async (farmId: string): Promise<void> => {
+    if (!farmId || farmId === 'undefined' || farmId === 'null') return;
     try {
       await apiClient.delete(`/farms/${farmId}`);
     } catch {
-      // Fallback in mock mode
+      // Graceful fallback
     }
     deleteMockFarm(farmId);
   },
@@ -97,16 +176,23 @@ export const farmApi = {
 
 export const zoneApi = {
   create: async (farmId: string, data: ZoneInput): Promise<Zone> => {
-    const response = await apiClient.post<Zone>(`/farms/${farmId}/zones`, data);
-    return response.data;
+    if (!farmId || farmId === 'undefined' || farmId === 'null') {
+      throw new Error('Cannot create zone without a valid farm ID.');
+    }
+    const response = await apiClient.post<any>(`/farms/${farmId}/zones`, data);
+    return normalizeZone(response.data);
   },
 
   update: async (farmId: string, zoneId: string, data: Partial<ZoneInput>): Promise<Zone> => {
-    const response = await apiClient.put<Zone>(`/farms/${farmId}/zones/${zoneId}`, data);
-    return response.data;
+    if (!farmId || farmId === 'undefined' || farmId === 'null' || !zoneId) {
+      throw new Error('Valid farm ID and zone ID are required to update field.');
+    }
+    const response = await apiClient.put<any>(`/farms/${farmId}/zones/${zoneId}`, data);
+    return normalizeZone(response.data);
   },
 
   delete: async (farmId: string, zoneId: string): Promise<void> => {
+    if (!farmId || farmId === 'undefined' || farmId === 'null' || !zoneId) return;
     await apiClient.delete(`/farms/${farmId}/zones/${zoneId}`);
   },
 };

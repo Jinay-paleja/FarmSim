@@ -44,7 +44,10 @@ export default function ScenarioComparisonPage() {
   }, [farmId]);
 
   const loadSimulations = async () => {
-    if (!farmId) return;
+    if (!farmId || farmId === 'undefined' || farmId === 'null') {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     setError(null);
     try {

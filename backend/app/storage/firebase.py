@@ -132,10 +132,29 @@ class FirestoreRepository:
 
     # Farm Operations
     def create_farm(self, farm: dict[str, Any]) -> None:
-        self._set("farms", farm["farm_id"], farm)
+        farm_id = farm.get("farm_id") or farm.get("id")
+        owner_id = farm.get("owner_id") or farm.get("ownerId")
+        self._set("farms", farm_id, farm)
+        if owner_id:
+            try:
+                self.db.collection("users").document(owner_id).collection("farms").document(farm_id).set(farm)
+            except Exception:
+                pass
 
     def get_farm(self, farm_id: str) -> dict[str, Any] | None:
-        return self._get("farms", farm_id)
+        if not farm_id or farm_id in ("undefined", "null", ""):
+            return None
+        doc = self._get("farms", farm_id)
+        if doc:
+            return doc
+        try:
+            for user_doc in self.db.collection("users").stream():
+                sub = user_doc.reference.collection("farms").document(farm_id).get()
+                if sub.exists:
+                    return sub.to_dict()
+        except Exception:
+            pass
+        return None
 
     def list_farms(self) -> list[dict[str, Any]]:
         try:
@@ -144,18 +163,35 @@ class FirestoreRepository:
             raise FirebaseStorageError(f"Firestore list_farms error: {exc}") from exc
 
     def update_farm(self, farm_id: str, updates: dict[str, Any]) -> dict[str, Any] | None:
+        if not farm_id or farm_id in ("undefined", "null", ""):
+            return None
         current = self.get_farm(farm_id)
         if not current:
             return None
+        owner_id = current.get("owner_id") or current.get("ownerId")
         try:
             self.db.collection("farms").document(farm_id).update(updates)
+            if owner_id:
+                try:
+                    self.db.collection("users").document(owner_id).collection("farms").document(farm_id).update(updates)
+                except Exception:
+                    pass
             return self.get_farm(farm_id)
         except Exception as exc:
             raise FirebaseStorageError(f"Firestore update_farm error: {exc}") from exc
 
     def delete_farm(self, farm_id: str) -> None:
+        if not farm_id or farm_id in ("undefined", "null", ""):
+            return
+        current = self.get_farm(farm_id)
+        owner_id = current.get("owner_id") or current.get("ownerId") if current else None
         try:
             self.db.collection("farms").document(farm_id).delete()
+            if owner_id:
+                try:
+                    self.db.collection("users").document(owner_id).collection("farms").document(farm_id).delete()
+                except Exception:
+                    pass
         except Exception as exc:
             raise FirebaseStorageError(f"Firestore delete_farm error: {exc}") from exc
 

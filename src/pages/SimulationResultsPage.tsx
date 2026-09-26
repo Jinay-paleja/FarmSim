@@ -68,7 +68,7 @@ export default function SimulationResultsPage() {
       setResult(simData);
 
       // 2. Load Farm for Map
-      if (farmId) {
+      if (farmId && farmId !== 'undefined' && farmId !== 'null') {
         try {
           const farmData = await farmApi.get(farmId);
           setFarm(farmData);

@@ -70,13 +70,23 @@ export default function FarmDashboardPage() {
 
   // Sync route and context
   useEffect(() => {
-    if (farmId) {
-      selectFarm(farmId);
-      loadFarm(farmId);
+    if (!farmId || farmId === 'undefined' || farmId === 'null') {
+      if (farms.length > 0 && farms[0].id && farms[0].id !== 'undefined') {
+        navigate(`/farms/${farms[0].id}`, { replace: true });
+        return;
+      }
+      setLoading(false);
+      return;
     }
-  }, [farmId, selectFarm]);
+    selectFarm(farmId);
+    loadFarm(farmId);
+  }, [farmId, selectFarm, farms, navigate]);
 
   const loadFarm = async (targetId: string) => {
+    if (!targetId || targetId === 'undefined' || targetId === 'null') {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     setError(null);
     try {
@@ -102,7 +112,11 @@ export default function FarmDashboardPage() {
       setFarm(farmData);
       updateFarmInState(farmData);
     } catch (err: any) {
-      setError(err?.message || 'Failed to load farm');
+      if (err?.status === 404 || err?.message?.includes('not found')) {
+        setError('This farm could not be found. It may have been deleted.');
+      } else {
+        setError(err?.message || "We couldn't load your farm data. Please try again.");
+      }
     } finally {
       setLoading(false);
     }
@@ -288,7 +302,33 @@ export default function FarmDashboardPage() {
 
   if (loading) return <LoadingSpinner message="Loading digital farm dashboard..." fullPage />;
   if (error) return <ErrorDisplay message={error} onRetry={() => farmId && loadFarm(farmId)} />;
-  if (!farm) return <ErrorDisplay message="Farm not found" />;
+  if (!farm) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[65vh] text-center px-4 bg-stone-50">
+        <div className="w-16 h-16 rounded-2xl bg-emerald-100 flex items-center justify-center mb-4 shadow-sm">
+          <Wheat className="w-8 h-8 text-emerald-700" />
+        </div>
+        <h2 className="text-2xl font-extrabold text-gray-900 mb-2">No Farm Selected</h2>
+        <p className="text-sm text-gray-600 max-w-md mb-6">
+          Choose a farm from My Farms or create a new one to view crop analytics, weather, and AI recommendations.
+        </p>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => navigate('/farms/create')}
+            className="px-5 py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white font-bold rounded-xl transition-colors shadow-sm"
+          >
+            Build New Farm
+          </button>
+          <button
+            onClick={() => navigate('/farms')}
+            className="px-5 py-2.5 bg-white border border-gray-300 hover:bg-gray-100 text-gray-700 font-semibold rounded-xl transition-colors shadow-sm"
+          >
+            My Farms
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   // Aggregates for whole farm
   const avgMoisture = farm.zones.length

@@ -19,14 +19,32 @@ class ContractModel(BaseModel):
 
 class FarmCreate(ContractModel):
     name: str = Field(min_length=1, max_length=120)
-    location: str = Field(min_length=1, max_length=160)
-    area_acres: float = Field(gt=0, le=100_000, validation_alias=AliasChoices("area_acres", "area"))
+    location: str = Field(min_length=1, max_length=255)
+    location_name: str | None = None
+    location_details: dict[str, Any] | None = None
+    area_acres: float = Field(gt=0, le=100_000, validation_alias=AliasChoices("area_acres", "area", "total_area"))
     latitude: float | None = Field(default=None, ge=-90, le=90)
     longitude: float | None = Field(default=None, ge=-180, le=180)
     number_of_zones: int = Field(
         default=1, ge=1, le=50, validation_alias=AliasChoices("number_of_zones", "numberOfZones")
     )
     owner_id: str | None = Field(default=None, validation_alias=AliasChoices("owner_id", "ownerId"))
+    boundary: list[list[float]] | None = None
+    boundary_points: list[dict[str, float]] | None = None
+    boundaryGeoJson: dict[str, Any] | None = None
+    mapped_area: float | None = None
+    total_area: float | None = None
+    crop: str | None = None
+    soil: str | None = None
+    growthStage: str | None = None
+    irrigation: str | None = None
+    soilMoisture: float | None = None
+    temperature: float | None = None
+    humidity: float | None = None
+    rainfall: float | None = None
+    nitrogen: float | None = None
+    phosphorus: float | None = None
+    potassium: float | None = None
 
     @field_validator("name", "location")
     @classmethod
@@ -39,13 +57,23 @@ class FarmCreate(ContractModel):
 
 class FarmUpdate(ContractModel):
     name: str | None = Field(default=None, min_length=1, max_length=120)
-    location: str | None = Field(default=None, min_length=1, max_length=160)
+    location: str | None = Field(default=None, min_length=1, max_length=255)
+    location_name: str | None = None
+    location_details: dict[str, Any] | None = None
     area_acres: float | None = Field(
-        default=None, gt=0, le=100_000, validation_alias=AliasChoices("area_acres", "area")
+        default=None, gt=0, le=100_000, validation_alias=AliasChoices("area_acres", "area", "total_area")
     )
     latitude: float | None = Field(default=None, ge=-90, le=90)
     longitude: float | None = Field(default=None, ge=-180, le=180)
     owner_id: str | None = Field(default=None, validation_alias=AliasChoices("owner_id", "ownerId"))
+    boundary: list[list[float]] | None = None
+    boundary_points: list[dict[str, float]] | None = None
+    boundaryGeoJson: dict[str, Any] | None = None
+    mapped_area: float | None = None
+    total_area: float | None = None
+    number_of_zones: int | None = Field(
+        default=None, ge=1, le=50, validation_alias=AliasChoices("number_of_zones", "numberOfZones")
+    )
 
 
 class UserCreate(ContractModel):
@@ -105,12 +133,12 @@ class ZoneInput(ContractModel):
     name: str = Field(min_length=1, max_length=120)
     area_acres: float = Field(gt=0, le=100_000, validation_alias=AliasChoices("area_acres", "area"))
     crop: str = Field(min_length=1, max_length=80)
-    soil: str = Field(min_length=1, max_length=80, validation_alias=AliasChoices("soil", "soilType"))
+    soil: str = Field(min_length=1, max_length=80, validation_alias=AliasChoices("soil", "soilType", "soil_type"))
     growth_stage: str = Field(
         min_length=1, max_length=80, validation_alias=AliasChoices("growth_stage", "growthStage")
     )
     irrigation: str = Field(
-        min_length=1, max_length=80, validation_alias=AliasChoices("irrigation", "irrigationMethod")
+        min_length=1, max_length=80, validation_alias=AliasChoices("irrigation", "irrigationMethod", "irrigation_method")
     )
     soil_moisture: float = Field(ge=0, le=100, validation_alias=AliasChoices("soil_moisture", "soilMoisture"))
     temperature: float = Field(ge=-40, le=70)
@@ -154,24 +182,64 @@ class ZoneUpdate(ContractModel):
 
 
 class Zone(ZoneInput):
-    zone_id: str
-    farm_id: str
+    zone_id: str = Field(validation_alias=AliasChoices("zone_id", "zoneId", "id"))
+    id: str | None = None
+    farm_id: str = Field(validation_alias=AliasChoices("farm_id", "farmId"))
+    farmId: str | None = None
     health_score: float | None = None
     disease_risk: float | None = None
 
+    @model_validator(mode="after")
+    def sync_zone_identifiers(self) -> "Zone":
+        if not self.id and self.zone_id:
+            self.id = self.zone_id
+        elif not self.zone_id and self.id:
+            self.zone_id = self.id
+        if not self.farmId and self.farm_id:
+            self.farmId = self.farm_id
+        elif not self.farm_id and self.farmId:
+            self.farm_id = self.farmId
+        return self
+
 
 class Farm(ContractModel):
-    farm_id: str
+    farm_id: str = Field(validation_alias=AliasChoices("farm_id", "farmId", "id"))
+    id: str | None = None
     owner_id: str | None = Field(default=None, validation_alias=AliasChoices("owner_id", "ownerId"))
+    ownerId: str | None = None
     name: str
     location: str
-    area_acres: float
+    location_name: str | None = None
+    location_details: dict[str, Any] | None = None
+    area_acres: float = Field(validation_alias=AliasChoices("area_acres", "area", "total_area"))
+    area: float | None = None
     latitude: float | None = None
     longitude: float | None = None
+    boundary: list[list[float]] | None = None
+    boundary_points: list[dict[str, float]] | None = None
+    boundaryGeoJson: dict[str, Any] | None = None
+    mapped_area: float | None = None
+    total_area: float | None = None
     number_of_zones: int = 1
     zones: list[Zone] = Field(default_factory=list)
     created_at: datetime | None = None
     updated_at: datetime | None = None
+
+    @model_validator(mode="after")
+    def sync_farm_identifiers(self) -> "Farm":
+        if not self.id and self.farm_id:
+            self.id = self.farm_id
+        elif not self.farm_id and self.id:
+            self.farm_id = self.id
+        if not self.ownerId and self.owner_id:
+            self.ownerId = self.owner_id
+        elif not self.owner_id and self.ownerId:
+            self.owner_id = self.ownerId
+        if self.area is None:
+            self.area = self.area_acres
+        if not self.location_name and self.location:
+            self.location_name = self.location
+        return self
 
 
 class ScenarioChange(ContractModel):

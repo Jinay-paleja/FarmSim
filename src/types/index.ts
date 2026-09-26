@@ -25,10 +25,16 @@ export interface User {
 
 export interface Farm {
   id: string;
+  farmId?: string;
+  farm_id?: string;
   ownerId?: string;
+  owner_id?: string;
   name: string;
   location: string;
+  location_name?: string;
+  location_details?: any;
   area: number; // in acres
+  area_acres?: number;
   latitude?: number;
   longitude?: number;
   boundary?: [number, number][]; // [lat, lng] coordinates of farm boundary polygon
@@ -51,7 +57,10 @@ export interface Farm {
 
 export interface Zone {
   id: string;
+  zoneId?: string;
+  zone_id?: string;
   farmId: string;
+  farm_id?: string;
   name: string;
   area: number;
   crop: CropType;

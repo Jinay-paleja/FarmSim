@@ -24,7 +24,10 @@ const FarmContext = createContext<FarmContextType | undefined>(undefined);
 export function FarmProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
   const [allFarms, setAllFarms] = useState<Farm[]>([]);
-  const [selectedFarmId, setSelectedFarmId] = useState<string | null>(null);
+  const [selectedFarmId, setSelectedFarmId] = useState<string | null>(() => {
+    const saved = localStorage.getItem('activeFarmId');
+    return saved && saved !== 'undefined' && saved !== 'null' ? saved : null;
+  });
   const [selectedZoneIndex, setSelectedZoneIndex] = useState<number | null>(null);
   const [loadingFarms, setLoadingFarms] = useState<boolean>(true);
 
@@ -35,8 +38,7 @@ export function FarmProvider({ children }: { children: React.ReactNode }) {
       setAllFarms(list || []);
     } catch (err) {
       console.warn('Could not load farms from API:', err);
-      // Fallback only to farms previously saved locally by the user
-      setAllFarms(ensureDefaultFarms());
+      setAllFarms([]);
     } finally {
       setLoadingFarms(false);
     }
@@ -49,24 +51,39 @@ export function FarmProvider({ children }: { children: React.ReactNode }) {
   // Filter farms strictly by current logged in user (multi-tenant security)
   const userFarms = useMemo(() => {
     if (!user) return [];
-    return allFarms.filter((f) => f.ownerId === user.id);
+    return allFarms.filter((f) => {
+      const farmOwner = f.ownerId || f.owner_id;
+      return farmOwner === user.id || farmOwner === user.email || !farmOwner;
+    });
   }, [allFarms, user]);
 
-  // Automatically sync selected farm to user's farms
+  // Automatically sync selected farm to user's farms and validate activeFarmId
   useEffect(() => {
+    if (loadingFarms) return;
     if (userFarms.length > 0) {
-      if (!selectedFarmId || !userFarms.some((f) => f.id === selectedFarmId)) {
-        setSelectedFarmId(userFarms[0].id);
+      const isValid = selectedFarmId && userFarms.some((f) => f.id === selectedFarmId);
+      if (!isValid) {
+        const canonicalId = userFarms[0].id;
+        setSelectedFarmId(canonicalId);
+        localStorage.setItem('activeFarmId', canonicalId);
         setSelectedZoneIndex(null);
       }
     } else {
       setSelectedFarmId(null);
+      localStorage.removeItem('activeFarmId');
       setSelectedZoneIndex(null);
     }
-  }, [userFarms, selectedFarmId]);
+  }, [userFarms, selectedFarmId, loadingFarms]);
 
-  const selectFarm = useCallback((farmId: string) => {
+  const selectFarm = useCallback((farmId: string | null) => {
+    if (!farmId || farmId === 'undefined' || farmId === 'null') {
+      setSelectedFarmId(null);
+      localStorage.removeItem('activeFarmId');
+      setSelectedZoneIndex(null);
+      return;
+    }
     setSelectedFarmId(farmId);
+    localStorage.setItem('activeFarmId', farmId);
     setSelectedZoneIndex(null); // Reset field selection when switching farms
   }, []);
 

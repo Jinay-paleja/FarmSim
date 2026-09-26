@@ -21,11 +21,12 @@ export default function Layout() {
 
   // Extract farmId from URL if present
   const farmIdMatch = location.pathname.match(/\/farms\/([^/]+)/);
-  const farmId = farmIdMatch?.[1];
+  const rawFarmId = farmIdMatch?.[1];
+  const farmId = rawFarmId && rawFarmId !== 'create' && rawFarmId !== 'undefined' && rawFarmId !== 'null' ? rawFarmId : undefined;
 
   // Sync selected farm if URL has farmId
   useEffect(() => {
-    if (farmId && farmId !== 'create' && farmId !== selectedFarm?.id) {
+    if (farmId && farmId !== selectedFarm?.id) {
       const match = farms.find((f) => f.id === farmId);
       if (match) selectFarm(match.id);
     }
@@ -51,20 +52,23 @@ export default function Layout() {
     setUserDropdownOpen(false);
   }, [location.pathname]);
 
-  const activeFarmId = selectedFarm?.id || (farmId && farmId !== 'create' ? farmId : undefined);
+  const activeFarmId = (selectedFarm?.id && selectedFarm.id !== 'undefined' && selectedFarm.id !== 'null')
+    ? selectedFarm.id
+    : (farmId || (farms.length > 0 && farms[0].id && farms[0].id !== 'undefined' ? farms[0].id : undefined));
+
+  const farmMapLink = activeFarmId ? `/farms/${activeFarmId}/builder` : (farms.length > 0 ? `/farms/${farms[0].id}/builder` : '/farms/create');
+  const simulationsLink = activeFarmId ? `/farms/${activeFarmId}/scenarios/new` : (farms.length > 0 ? `/farms/${farms[0].id}/scenarios/new` : '/farms/create');
+  const analyticsLink = activeFarmId ? `/farms/${activeFarmId}` : '/farms';
+  const compareLink = activeFarmId ? `/farms/${activeFarmId}/compare` : '/farms';
 
   // Authenticated Navigation Items
   const authNavItems = [
     { to: '/dashboard', icon: BarChart3, label: 'Dashboard' },
     { to: '/farms', icon: Tractor, label: 'My Farms' },
-    ...(activeFarmId
-      ? [
-          { to: `/farms/${activeFarmId}/builder`, icon: Layers, label: 'Farm Map' },
-          { to: `/farms/${activeFarmId}/scenarios/new`, icon: Sprout, label: 'Simulations' },
-          { to: `/farms/${activeFarmId}`, icon: LineChart, label: 'Analytics' },
-          { to: `/farms/${activeFarmId}/compare`, icon: GitCompare, label: 'Compare' },
-        ]
-      : []),
+    { to: farmMapLink, icon: Layers, label: 'Farm Map' },
+    { to: simulationsLink, icon: Sprout, label: 'Simulations' },
+    { to: analyticsLink, icon: LineChart, label: 'Analytics' },
+    { to: compareLink, icon: GitCompare, label: 'Compare' },
   ];
 
   // Public Navigation Items

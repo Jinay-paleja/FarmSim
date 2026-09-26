@@ -109,27 +109,17 @@ export default function FarmCreatePage() {
     };
 
     try {
-      let farm: Farm;
-      try {
-        farm = await farmApi.create(payload);
-      } catch {
-        if (isMockEnabled()) {
-          farm = createMockFarm(payload);
-          // Store in localStorage for mock mode
-          const farms = JSON.parse(localStorage.getItem('farms') || '[]');
-          farms.push(farm);
-          localStorage.setItem('farms', JSON.stringify(farms));
-          toast.success('Farm created (offline mode)');
-        } else {
-          throw new Error('Failed to create farm');
-        }
+      const farm = await farmApi.create(payload);
+      const createdFarmId = farm.id || farm.farmId;
+      if (!createdFarmId) {
+        throw new Error('Farm creation did not return a valid farm ID.');
       }
       await refreshFarms();
-      selectFarm(farm.id);
-      toast.success('Farm created successfully! Opening Farm Map Builder...');
-      navigate(`/farms/${farm.id}/builder`);
+      selectFarm(createdFarmId);
+      toast.success('Farm created successfully! Opening Farm Map...');
+      navigate(`/farms/${createdFarmId}/builder`);
     } catch (err: any) {
-      toast.error(err?.message || 'Failed to create farm');
+      toast.error(err?.message || 'Failed to create farm. Please verify details and try again.');
     } finally {
       setLoading(false);
     }
@@ -322,6 +312,12 @@ export default function FarmCreatePage() {
                 updateField('latitude', coords[0]);
                 updateField('longitude', coords[1]);
                 setMapCenter(coords);
+              }}
+              onLocationDetailsChange={(details) => {
+                updateField('location', details.formattedLocation);
+                updateField('latitude', details.latitude);
+                updateField('longitude', details.longitude);
+                setMapCenter([details.latitude, details.longitude]);
               }}
             />
 
