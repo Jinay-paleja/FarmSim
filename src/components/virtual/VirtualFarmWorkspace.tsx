@@ -198,13 +198,14 @@ export default function VirtualFarmWorkspace({
         {/* Progress / Capacity Bar */}
         <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden flex">
           {zones.map((zone, idx) => {
-            const widthPct = totalArea > 0 ? Math.min(100, (Number(zone.area) / totalArea) * 100) : 0;
-            const color = CROP_COLORS[zone.crop] || '#16a34a';
+            const zArea = Number(zone.area ?? (zone as any).area_acres ?? 0);
+            const widthPct = totalArea > 0 ? Math.min(100, (zArea / totalArea) * 100) : 0;
+            const color = (zone.crop && CROP_COLORS[zone.crop]) || '#16a34a';
             return (
               <div
                 key={idx}
                 style={{ width: `${widthPct}%`, backgroundColor: color }}
-                title={`${zone.name} (${zone.crop}): ${zone.area} acres`}
+                title={`${zone.name || `Zone ${idx + 1}`} (${zone.crop || 'Crop'}): ${zArea} acres`}
                 className="h-full transition-all duration-300 relative group cursor-pointer"
                 onClick={() => onSelectZone(idx)}
               />
@@ -268,9 +269,10 @@ export default function VirtualFarmWorkspace({
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {zones.map((zone, idx) => {
               const isSelected = selectedZoneIndex === idx;
-              const cropColor = CROP_COLORS[zone.crop] || '#16a34a';
-              const emoji = CROP_EMOJIS[zone.crop] || '🌱';
-              const pctOfFarm = totalArea > 0 ? ((Number(zone.area) / totalArea) * 100).toFixed(0) : '0';
+              const cropColor = (zone.crop && CROP_COLORS[zone.crop]) || '#16a34a';
+              const emoji = (zone.crop && CROP_EMOJIS[zone.crop]) || '🌱';
+              const zArea = Number(zone.area ?? (zone as any).area_acres ?? 0);
+              const pctOfFarm = totalArea > 0 ? ((zArea / totalArea) * 100).toFixed(0) : '0';
 
               return (
                 <div
@@ -285,10 +287,10 @@ export default function VirtualFarmWorkspace({
                   {/* Top Bar inside Card */}
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-2">
-                      <span className="text-xl" role="img" aria-label={zone.crop}>{emoji}</span>
+                      <span className="text-xl" role="img" aria-label={zone.crop || 'Crop'}>{emoji}</span>
                       <div>
-                        <h5 className="font-bold text-sm text-gray-900 leading-tight">{zone.name}</h5>
-                        <span className="text-[11px] font-semibold text-gray-500">{zone.crop}</span>
+                        <h5 className="font-bold text-sm text-gray-900 leading-tight">{zone.name || `Zone ${idx + 1}`}</h5>
+                        <span className="text-[11px] font-semibold text-gray-500">{zone.crop || 'Unspecified'}</span>
                       </div>
                     </div>
 
@@ -296,7 +298,7 @@ export default function VirtualFarmWorkspace({
                       style={{ backgroundColor: `${cropColor}20`, color: cropColor }}
                       className="text-[11px] font-extrabold px-2 py-0.5 rounded-full border"
                     >
-                      {zone.area} acres ({pctOfFarm}%)
+                      {zArea} acres ({pctOfFarm}%)
                     </span>
                   </div>
 
@@ -304,15 +306,15 @@ export default function VirtualFarmWorkspace({
                   <div className="grid grid-cols-2 gap-2 mt-3 pt-3 border-t border-gray-100 text-xs">
                     <div className="bg-stone-50 p-2 rounded-lg">
                       <span className="text-gray-400 block text-[10px] uppercase font-bold">Soil</span>
-                      <span className="font-semibold text-gray-800">{zone.soilType}</span>
+                      <span className="font-semibold text-gray-800">{zone.soilType || (zone as any).soil || 'Loam'}</span>
                     </div>
                     <div className="bg-stone-50 p-2 rounded-lg">
                       <span className="text-gray-400 block text-[10px] uppercase font-bold">Stage</span>
-                      <span className="font-semibold text-gray-800">{zone.growthStage}</span>
+                      <span className="font-semibold text-gray-800">{zone.growthStage || (zone as any).growth_stage || 'Vegetative'}</span>
                     </div>
                     <div className="bg-stone-50 p-2 rounded-lg">
                       <span className="text-gray-400 block text-[10px] uppercase font-bold">Irrigation</span>
-                      <span className="font-semibold text-gray-800">{zone.irrigationMethod}</span>
+                      <span className="font-semibold text-gray-800">{zone.irrigationMethod || (zone as any).irrigation || 'Drip'}</span>
                     </div>
                     <div className="bg-stone-50 p-2 rounded-lg">
                       <span className="text-gray-400 block text-[10px] uppercase font-bold">Moisture</span>

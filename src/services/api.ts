@@ -197,24 +197,120 @@ export const zoneApi = {
   },
 };
 
+export function normalizeSimulation(raw: any): SimulationResult {
+  if (!raw) return raw;
+  const canonicalId = String(raw.simulation_id || raw.simulationId || raw.id || '');
+  const canonicalFarmId = String(raw.farm_id || raw.farmId || '');
+  const canonicalScenarioId = raw.scenario_id || raw.scenarioId || undefined;
+
+  const rawSummary = raw.summary || {};
+  const summary = {
+    totalWaterUsage: Number(rawSummary.total_water_usage ?? rawSummary.totalWaterUsage ?? 0),
+    averageCropHealth: Number(rawSummary.average_crop_health ?? rawSummary.averageCropHealth ?? 0),
+    averageDiseaseRisk: Number(rawSummary.average_disease_risk ?? rawSummary.averageDiseaseRisk ?? 0),
+    totalExpectedYield: Number(rawSummary.total_expected_yield ?? rawSummary.totalExpectedYield ?? 0),
+    averageSoilMoisture: Number(rawSummary.average_soil_moisture ?? rawSummary.averageSoilMoisture ?? 0),
+    averageWaterStress: Number(rawSummary.average_water_stress ?? rawSummary.averageWaterStress ?? 0),
+    averageHeatStress: Number(rawSummary.average_heat_stress ?? rawSummary.averageHeatStress ?? 0),
+  };
+
+  let baselineSummary = undefined;
+  const rawBaseSummary = raw.baseline_summary || raw.baselineSummary;
+  if (rawBaseSummary) {
+    baselineSummary = {
+      totalWaterUsage: Number(rawBaseSummary.total_water_usage ?? rawBaseSummary.totalWaterUsage ?? 0),
+      averageCropHealth: Number(rawBaseSummary.average_crop_health ?? rawBaseSummary.averageCropHealth ?? 0),
+      averageDiseaseRisk: Number(rawBaseSummary.average_disease_risk ?? rawBaseSummary.averageDiseaseRisk ?? 0),
+      totalExpectedYield: Number(rawBaseSummary.total_expected_yield ?? rawBaseSummary.totalExpectedYield ?? 0),
+      averageSoilMoisture: Number(rawBaseSummary.average_soil_moisture ?? rawBaseSummary.averageSoilMoisture ?? 0),
+    };
+  }
+
+  const rawTimeline = Array.isArray(raw.timeline) ? raw.timeline : [];
+  const timeline = rawTimeline.map((pt: any) => {
+    const rawZones = Array.isArray(pt.zones) ? pt.zones : [];
+    const zones = rawZones.map((zt: any) => ({
+      zoneId: String(zt.zone_id || zt.zoneId || zt.id || ''),
+      zoneName: zt.zone_name || zt.zoneName || 'Field',
+      crop: zt.crop,
+      soil: zt.soil,
+      soilMoisture: Number(zt.soil_moisture ?? zt.soilMoisture ?? 0),
+      cropHealth: Number(zt.crop_health ?? zt.cropHealth ?? 0),
+      diseaseRisk: Number(zt.disease_risk ?? zt.diseaseRisk ?? 0),
+      pestRisk: Number(zt.pest_risk ?? zt.pestRisk ?? 15),
+      waterConsumption: Number(zt.water_consumption ?? zt.waterConsumption ?? 0),
+      expectedYield: Number(zt.expected_yield ?? zt.expectedYield ?? 0),
+      waterStress: Number(zt.water_stress ?? zt.waterStress ?? 0),
+      heatStress: Number(zt.heat_stress ?? zt.heatStress ?? 0),
+      yieldPotential: Number(zt.yield_potential ?? zt.yieldPotential ?? zt.expected_yield ?? zt.expectedYield ?? 0),
+      stressState: zt.stress_state || zt.stressState || 'healthy',
+    }));
+
+    return {
+      day: Number(pt.day ?? 0),
+      label: pt.label || `Day ${pt.day ?? 0}`,
+      soilMoisture: Number(pt.soil_moisture ?? pt.soilMoisture ?? 0),
+      cropHealth: Number(pt.crop_health ?? pt.cropHealth ?? 0),
+      diseaseRisk: Number(pt.disease_risk ?? pt.diseaseRisk ?? 0),
+      waterConsumption: Number(pt.water_consumption ?? pt.waterConsumption ?? 0),
+      expectedYield: Number(pt.expected_yield ?? pt.expectedYield ?? 0),
+      temperature: pt.temperature !== undefined ? Number(pt.temperature) : undefined,
+      rainfall: pt.rainfall !== undefined ? Number(pt.rainfall) : undefined,
+      baselineTemperature: pt.baseline_temperature !== undefined ? Number(pt.baseline_temperature) : (pt.baselineTemperature !== undefined ? Number(pt.baselineTemperature) : undefined),
+      baselineRainfall: pt.baseline_rainfall !== undefined ? Number(pt.baseline_rainfall) : (pt.baselineRainfall !== undefined ? Number(pt.baselineRainfall) : undefined),
+      waterStress: pt.water_stress !== undefined ? Number(pt.water_stress) : (pt.waterStress !== undefined ? Number(pt.waterStress) : 0),
+      heatStress: pt.heat_stress !== undefined ? Number(pt.heat_stress) : (pt.heatStress !== undefined ? Number(pt.heatStress) : 0),
+      pestRisk: pt.pest_risk !== undefined ? Number(pt.pest_risk) : (pt.pestRisk !== undefined ? Number(pt.pestRisk) : 15),
+      yieldPotential: pt.yield_potential !== undefined ? Number(pt.yield_potential) : (pt.yieldPotential !== undefined ? Number(pt.yieldPotential) : (pt.expected_yield !== undefined ? Number(pt.expected_yield) : Number(pt.expectedYield ?? 0))),
+      weatherCondition: pt.weather_condition || pt.weatherCondition || 'normal',
+      zones,
+    };
+  });
+
+  return {
+    ...raw,
+    id: canonicalId,
+    farmId: canonicalFarmId,
+    scenarioId: canonicalScenarioId,
+    scenarioName: raw.scenario_name || raw.scenarioName || 'Simulation',
+    timeline,
+    summary,
+    baselineSummary,
+    aiExplanation: raw.ai_explanation || raw.aiExplanation || '',
+    farm_area_acres: Number(raw.farm_area_acres ?? raw.farmAreaAcres ?? 10),
+  };
+}
+
 // ============================================================
 // Simulation API
 // ============================================================
 
 export const simulationApi = {
   run: async (data: SimulationRequest): Promise<SimulationResult> => {
-    const response = await apiClient.post<SimulationResult>('/simulate', data);
-    return response.data;
+    const response = await apiClient.post<any>('/simulate', data);
+    const normalized = normalizeSimulation(response.data);
+    try {
+      localStorage.setItem('last_simulation_result', JSON.stringify(normalized));
+    } catch {
+      // ignore storage errors
+    }
+    return normalized;
   },
 
   get: async (simId: string): Promise<SimulationResult> => {
-    const response = await apiClient.get<SimulationResult>(`/simulation/${simId}`);
-    return response.data;
+    const response = await apiClient.get<any>(`/simulation/${simId}`);
+    const normalized = normalizeSimulation(response.data);
+    try {
+      localStorage.setItem('last_simulation_result', JSON.stringify(normalized));
+    } catch {
+      // ignore storage errors
+    }
+    return normalized;
   },
 
   list: async (farmId: string): Promise<SimulationResult[]> => {
-    const response = await apiClient.get<SimulationResult[]>(`/farms/${farmId}/simulations`);
-    return response.data;
+    const response = await apiClient.get<any[]>(`/farms/${farmId}/simulations`);
+    return Array.isArray(response.data) ? response.data.map(normalizeSimulation) : [];
   },
 };
 

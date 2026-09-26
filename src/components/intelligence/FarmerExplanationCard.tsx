@@ -77,7 +77,7 @@ export default function FarmerExplanationCard({
       </div>
 
       {/* 3. Detected Trade-Offs (Key requirement from Person 3 spec) */}
-      {explanation.tradeOffs.length > 0 && (
+      {Array.isArray(explanation.tradeOffs) && explanation.tradeOffs.length > 0 && (
         <div className="p-6 border-b border-gray-100 dark:border-gray-800 bg-gradient-to-r from-amber-50/40 via-white to-blue-50/40 dark:from-amber-950/20 dark:via-gray-900 dark:to-blue-950/20">
           <h3 className="text-xs font-bold uppercase tracking-wider text-amber-900 dark:text-amber-300 mb-3 flex items-center gap-2">
             <Scale className="w-4 h-4 text-amber-600" />
@@ -107,80 +107,84 @@ export default function FarmerExplanationCard({
       )}
 
       {/* 4. Metric-by-Metric Variance & Deltas */}
-      <div className="p-6 border-b border-gray-100 dark:border-gray-800">
-        <h3 className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-4">
-          Metric-by-Metric Impact Classification
-        </h3>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5">
-          {explanation.metricDeltas.map((item) => {
-            const isPos = item.absoluteChange > 0;
-            const sign = isPos ? '+' : '';
-            return (
-              <div
-                key={item.metric}
-                className="p-3.5 rounded-xl border border-gray-200 dark:border-gray-800 bg-stone-50/60 dark:bg-gray-800/40 flex flex-col justify-between"
-              >
-                <div>
-                  <span className="text-xs text-gray-500 dark:text-gray-400 block font-semibold truncate">
-                    {item.label}
-                  </span>
-                  <div className="text-lg font-black text-gray-900 dark:text-gray-100 mt-1">
-                    {item.scenarioValue} {item.unit}
+      {Array.isArray(explanation.metricDeltas) && explanation.metricDeltas.length > 0 && (
+        <div className="p-6 border-b border-gray-100 dark:border-gray-800">
+          <h3 className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-4">
+            Metric-by-Metric Impact Classification
+          </h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5">
+            {explanation.metricDeltas.map((item) => {
+              const isPos = item.absoluteChange > 0;
+              const sign = isPos ? '+' : '';
+              return (
+                <div
+                  key={item.metric}
+                  className="p-3.5 rounded-xl border border-gray-200 dark:border-gray-800 bg-stone-50/60 dark:bg-gray-800/40 flex flex-col justify-between"
+                >
+                  <div>
+                    <span className="text-xs text-gray-500 dark:text-gray-400 block font-semibold truncate">
+                      {item.label}
+                    </span>
+                    <div className="text-lg font-black text-gray-900 dark:text-gray-100 mt-1">
+                      {item.scenarioValue} {item.unit}
+                    </div>
+                    <div className="text-[11px] text-gray-400">
+                      Baseline: {item.baselineValue} {item.unit}
+                    </div>
                   </div>
-                  <div className="text-[11px] text-gray-400">
-                    Baseline: {item.baselineValue} {item.unit}
-                  </div>
-                </div>
 
-                <div className="pt-2 mt-2 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between text-xs">
-                  <span
-                    className={`font-black flex items-center gap-0.5 ${
-                      item.isFavorable ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'
-                    }`}
-                  >
-                    {isPos ? <TrendingUp className="w-3.5 h-3.5" /> : <TrendingDown className="w-3.5 h-3.5" />}
-                    {sign}{item.percentageChange}%
-                  </span>
-                  <span
-                    className={`text-[9px] font-bold px-1.5 py-0.5 rounded-md ${
-                      item.impactSeverity === 'SEVERE'
-                        ? 'bg-red-100 text-red-800'
-                        : item.impactSeverity === 'MODERATE'
-                        ? 'bg-amber-100 text-amber-800'
-                        : 'bg-emerald-100 text-emerald-800'
-                    }`}
-                  >
-                    {item.impactSeverity}
-                  </span>
+                  <div className="pt-2 mt-2 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between text-xs">
+                    <span
+                      className={`font-black flex items-center gap-0.5 ${
+                        item.isFavorable ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'
+                      }`}
+                    >
+                      {isPos ? <TrendingUp className="w-3.5 h-3.5" /> : <TrendingDown className="w-3.5 h-3.5" />}
+                      {sign}{item.percentageChange}%
+                    </span>
+                    <span
+                      className={`text-[9px] font-bold px-1.5 py-0.5 rounded-md ${
+                        item.impactSeverity === 'SEVERE'
+                          ? 'bg-red-100 text-red-800'
+                          : item.impactSeverity === 'MODERATE'
+                          ? 'bg-amber-100 text-amber-800'
+                          : 'bg-emerald-100 text-emerald-800'
+                      }`}
+                    >
+                      {item.impactSeverity}
+                    </span>
+                  </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* 5. Actionable Agronomic Recommendations */}
-      <div className="p-6 bg-stone-50/50 dark:bg-gray-800/20">
-        <h3 className="text-xs font-bold uppercase tracking-wider text-emerald-800 dark:text-emerald-300 mb-3 flex items-center gap-2">
-          <ShieldCheck className="w-4 h-4 text-farm-green" />
-          Recommended Agronomic Interventions
-        </h3>
-        <div className="space-y-2.5">
-          {explanation.recommendations.map((rec, i) => (
-            <div
-              key={i}
-              className="p-3.5 rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 flex items-start gap-3 shadow-xs"
-            >
-              <div className="w-6 h-6 rounded-lg bg-farm-green/10 text-farm-green flex items-center justify-center font-bold text-xs flex-shrink-0 mt-0.5">
-                {i + 1}
+      {Array.isArray(explanation.recommendations) && explanation.recommendations.length > 0 && (
+        <div className="p-6 bg-stone-50/50 dark:bg-gray-800/20">
+          <h3 className="text-xs font-bold uppercase tracking-wider text-emerald-800 dark:text-emerald-300 mb-3 flex items-center gap-2">
+            <ShieldCheck className="w-4 h-4 text-farm-green" />
+            Recommended Agronomic Interventions
+          </h3>
+          <div className="space-y-2.5">
+            {explanation.recommendations.map((rec, i) => (
+              <div
+                key={i}
+                className="p-3.5 rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 flex items-start gap-3 shadow-xs"
+              >
+                <div className="w-6 h-6 rounded-lg bg-farm-green/10 text-farm-green flex items-center justify-center font-bold text-xs flex-shrink-0 mt-0.5">
+                  {i + 1}
+                </div>
+                <p className="text-xs sm:text-sm text-gray-700 dark:text-gray-300 leading-relaxed font-medium">
+                  {rec}
+                </p>
               </div>
-              <p className="text-xs sm:text-sm text-gray-700 dark:text-gray-300 leading-relaxed font-medium">
-                {rec}
-              </p>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
