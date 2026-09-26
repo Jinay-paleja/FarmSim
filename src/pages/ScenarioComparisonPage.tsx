@@ -48,30 +48,11 @@ export default function ScenarioComparisonPage() {
     setLoading(true);
     setError(null);
     try {
-      let data: SimulationResult[];
-      try {
-        data = await simulationApi.list(farmId);
-      } catch {
-        if (isMockEnabled()) {
-          data = JSON.parse(localStorage.getItem('simulations') || '[]') as SimulationResult[];
-          data = data.filter((s) => s.farmId === farmId);
-          // If no simulations exist, create some defaults for demo
-          if (data.length === 0) {
-            const baseline = createMockSimulation(farmId, 'Baseline');
-            const drought = createMockSimulation(farmId, 'Drought Scenario');
-            const heatwave = createMockSimulation(farmId, 'Heatwave Scenario');
-            data = [baseline, drought, heatwave];
-            const existing = JSON.parse(localStorage.getItem('simulations') || '[]');
-            localStorage.setItem('simulations', JSON.stringify([...existing, ...data]));
-          }
-        } else {
-          throw new Error('Failed to load simulations');
-        }
-      }
-      setSimulations(data);
-      if (data.length >= 2) {
+      const data = await simulationApi.list(farmId);
+      setSimulations(data || []);
+      if (data && data.length >= 2) {
         setSelectedIds([data[0].id, data[1].id]);
-      } else if (data.length === 1) {
+      } else if (data && data.length === 1) {
         setSelectedIds([data[0].id]);
       }
     } catch (err: any) {
@@ -95,21 +76,11 @@ export default function ScenarioComparisonPage() {
     }
     setComparing(true);
     try {
-      let data: ComparisonResult;
-      try {
-        data = await comparisonApi.compare({ simulationIds: selectedIds });
-      } catch {
-        if (isMockEnabled()) {
-          const selected = simulations.filter((s) => selectedIds.includes(s.id));
-          data = createMockComparison(selected);
-        } else {
-          throw new Error('Comparison failed');
-        }
-      }
+      const data = await comparisonApi.compare({ simulation_ids: selectedIds } as any);
       setComparison(data);
       toast.success('Comparison ready!');
     } catch (err: any) {
-      toast.error(err?.message || 'Comparison failed');
+      toast.error(err?.message || 'Comparison failed. Please try again.');
     } finally {
       setComparing(false);
     }

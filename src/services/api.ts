@@ -164,4 +164,85 @@ export const comparisonApi = {
   },
 };
 
+// ============================================================
+// AI & Scenario Intelligence API
+// ============================================================
+
+export interface BackendRiskAssessment {
+  farm_id: string;
+  overall_risk: 'LOW' | 'MEDIUM' | 'HIGH';
+  zone_risks: Array<{
+    zone_id: string;
+    zone_name: string;
+    water_stress: { level: 'LOW' | 'MEDIUM' | 'HIGH'; score: number; probability: Record<string, number> };
+    heat_stress: { level: 'LOW' | 'MEDIUM' | 'HIGH'; score: number; probability: Record<string, number> };
+    disease_risk: { level: 'LOW' | 'MEDIUM' | 'HIGH'; score: number; probability: Record<string, number> };
+    nutrient_risk: { level: 'LOW' | 'MEDIUM' | 'HIGH'; score: number; probability: Record<string, number> };
+    top_contributing_factors?: Array<{ field: string; message: string; contribution: number }>;
+  }>;
+  model_version: string;
+  assessed_at?: string;
+}
+
+export interface BackendScenarioSuggestion {
+  id: string;
+  title: string;
+  description: string;
+  priority: 'LOW' | 'MEDIUM' | 'HIGH';
+  scenario_type: string;
+  duration: number;
+  target_zones: string[];
+  changes: Record<string, number>;
+}
+
+export const aiApi = {
+  analyzeRisk: async (farmId: string): Promise<BackendRiskAssessment> => {
+    const response = await apiClient.post<BackendRiskAssessment>('/ai/analyze-risk', {
+      farm_id: farmId,
+    });
+    return response.data;
+  },
+
+  suggestScenarios: async (farmId: string): Promise<{ suggestions: BackendScenarioSuggestion[]; source: string }> => {
+    const response = await apiClient.post<{ suggestions: BackendScenarioSuggestion[]; source: string }>(
+      '/ai/suggest-scenarios',
+      { farm_id: farmId }
+    );
+    return response.data;
+  },
+
+  parseScenario: async (text: string, farmId?: string): Promise<Scenario> => {
+    const response = await apiClient.post<Scenario>('/ai/parse-scenario', {
+      text,
+      farm_id: farmId,
+    });
+    return response.data;
+  },
+
+  explainResult: async (simulationId: string): Promise<any> => {
+    const response = await apiClient.post('/ai/explain-result', {
+      simulation_id: simulationId,
+    });
+    return response.data;
+  },
+
+  sensitivityAnalysis: async (payload: {
+    scenario_type: string;
+    crop?: string;
+    baseline_yield?: number;
+    current_soil_moisture?: number;
+  }): Promise<any> => {
+    const response = await apiClient.post('/ai/sensitivity-analysis', payload);
+    return response.data;
+  },
+
+  prescribeIntervention: async (farmState: any, objective?: string): Promise<any> => {
+    const response = await apiClient.post('/ai/prescribe-intervention', {
+      farm_state: farmState,
+      objective: objective || 'BALANCED_EFFICIENCY',
+    });
+    return response.data;
+  },
+};
+
 export default apiClient;

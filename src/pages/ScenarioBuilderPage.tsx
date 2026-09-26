@@ -70,7 +70,7 @@ export default function ScenarioBuilderPage() {
     'What if rainfall drops by 40% for the next 45 days in Zone A?'
   );
 
-  const [showJsonPreview, setShowJsonPreview] = useState(true);
+  const [showJsonPreview, setShowJsonPreview] = useState(false);
   const [showAdvancedChanges, setShowAdvancedChanges] = useState(false);
   const [changes, setChanges] = useState<ScenarioChange[]>([]);
 
@@ -237,53 +237,34 @@ export default function ScenarioBuilderPage() {
 
     setRunning(true);
     try {
-      const scenarioPayload: Partial<Scenario> = {
+      const scenarioPayload: any = {
         farmId: farm.id,
-        name: creationMethod === 'nlp' ? `NLP: ${nlQuery.slice(0, 32)}...` : name,
+        name: creationMethod === 'nlp' ? `What-If: ${nlQuery.slice(0, 35)}...` : name,
         duration: structuredScenarioJson.duration_days,
-        affectedZones,
+        duration_days: structuredScenarioJson.duration_days,
+        affectedZones: affectedZones.length > 0 ? affectedZones : farm.zones.map((z) => z.id),
+        target_zones: affectedZones.length > 0 ? affectedZones : farm.zones.map((z) => z.id),
+        scenarioType: structuredScenarioJson.scenario_type,
+        scenario_type: structuredScenarioJson.scenario_type,
+        changes: structuredScenarioJson.changes, // Send real scenario changes to API
         naturalLanguageQuery: creationMethod === 'nlp' ? nlQuery : undefined,
       };
 
-      let result: SimulationResult;
-      try {
-        const createdScenario = await scenarioApi.create(scenarioPayload);
-        result = await simulationApi.run({
-          farmId: farm.id,
-          scenarioId: createdScenario.id,
-          zones: farm.zones.filter((z) => affectedZones.includes(z.id)),
-          scenario: createdScenario,
-          mode: 'what_if',
-          durationDays: structuredScenarioJson.duration_days,
-        });
-      } catch {
-        if (isMockEnabled()) {
-          result = createMockSimulation(
-            farm.id,
-            scenarioPayload.name || 'What-If Scenario',
-            weather,
-            farm.zones.filter((z) => affectedZones.includes(z.id)),
-            'what_if',
-            {
-              tempDelta: structuredScenarioJson.changes.temperature_delta || 0,
-              rainMultiplier: structuredScenarioJson.changes.rainfall_multiplier || 1.0,
-              irrigationFailure: structuredScenarioJson.changes.irrigation_failure || false,
-            },
-            structuredScenarioJson.duration_days,
-            structuredScenarioJson
-          );
-          const sims = JSON.parse(localStorage.getItem('simulations') || '[]');
-          sims.push(result);
-          localStorage.setItem('simulations', JSON.stringify(sims));
-        } else {
-          throw new Error('Simulation failed');
-        }
-      }
+      const createdScenario = await scenarioApi.create(scenarioPayload);
+      const result = await simulationApi.run({
+        farmId: farm.id,
+        scenarioId: createdScenario.id,
+        zones: farm.zones.filter((z) => (affectedZones.length > 0 ? affectedZones.includes(z.id) : true)),
+        scenario: createdScenario,
+        mode: 'what_if',
+        durationDays: structuredScenarioJson.duration_days,
+      });
 
-      toast.success('Simulation generated! Loading timeline and visual twin...');
+      toast.success('Simulation complete! Loading your farm forecast...');
       navigate(`/farms/${farm.id}/simulations/${result.id}`);
     } catch (err: any) {
-      toast.error(err?.message || 'Failed to run simulation');
+      console.error('Simulation run failed:', err);
+      toast.error(err?.message || 'Failed to run simulation. Please try again.');
     } finally {
       setRunning(false);
     }
@@ -670,28 +651,26 @@ export default function ScenarioBuilderPage() {
           </div>
         )}
 
-        {/* ============================================================ */}
-        {/* 4. STRUCTURED SCENARIO JSON LIVE CONTRACT PREVIEW */}
-        {/* ============================================================ */}
-        <div className="p-5 border-t border-gray-200 dark:border-gray-800 bg-stone-900 text-stone-100">
-          <div className="flex items-center justify-between mb-3">
+        {/* 4. OPTIONAL ADVANCED VIEW */}
+        <div className="p-4 border-t border-gray-200 dark:border-gray-800 bg-stone-100 dark:bg-stone-900/60 text-stone-700 dark:text-stone-300">
+          <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Code className="w-4 h-4 text-emerald-400" />
-              <span className="text-xs font-bold uppercase tracking-wider text-emerald-400">
-                Live Structured Scenario JSON (Person 2 Contract)
+              <Code className="w-4 h-4 text-emerald-600" />
+              <span className="text-xs font-semibold text-gray-700 dark:text-gray-300">
+                Advanced Parameter View (Optional)
               </span>
             </div>
             <button
               type="button"
               onClick={() => setShowJsonPreview(!showJsonPreview)}
-              className="text-xs text-stone-400 hover:text-white"
+              className="text-xs font-medium text-emerald-700 dark:text-emerald-400 hover:underline"
             >
-              {showJsonPreview ? 'Hide JSON' : 'View JSON'}
+              {showJsonPreview ? 'Hide Parameters' : 'Show Parameters'}
             </button>
           </div>
 
           {showJsonPreview && (
-            <pre className="p-3.5 rounded-xl bg-black/60 border border-stone-800 text-xs font-mono text-emerald-300 overflow-x-auto leading-relaxed">
+            <pre className="mt-3 p-3.5 rounded-xl bg-black/80 border border-stone-800 text-xs font-mono text-emerald-300 overflow-x-auto leading-relaxed">
               {JSON.stringify(structuredScenarioJson, null, 2)}
             </pre>
           )}
@@ -708,17 +687,17 @@ export default function ScenarioBuilderPage() {
             {running ? (
               <>
                 <Loader2 className="w-5 h-5 animate-spin" />
-                <span>Running Simulation Timeline & Agricultural Risk Model...</span>
+                <span>Simulating Your Farm Forecast...</span>
               </>
             ) : (
               <>
                 <Play className="w-5 h-5 fill-current" />
-                <span>START SIMULATION WITH STRUCTURED SCENARIO</span>
+                <span>Run Farm Simulation</span>
               </>
             )}
           </button>
           <p className="text-center text-xs text-gray-500 mt-2">
-            Compiles into standardized Scenario JSON and executes Person 2's day-by-day simulation engine.
+            Calculates day-by-day soil moisture, crop health, water needs, and projected yield.
           </p>
         </div>
       </div>

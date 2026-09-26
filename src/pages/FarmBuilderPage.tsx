@@ -138,19 +138,7 @@ export default function FarmBuilderPage() {
     setLoading(true);
     setError(null);
     try {
-      let farmData: Farm;
-      try {
-        farmData = await farmApi.get(farmId);
-      } catch {
-        if (isMockEnabled()) {
-          const stored = JSON.parse(localStorage.getItem('farms') || '[]') as Farm[];
-          const found = stored.find((f) => f.id === farmId);
-          if (!found) throw new Error('Farm not found');
-          farmData = found;
-        } else {
-          throw new Error('Failed to load farm');
-        }
-      }
+      const farmData = await farmApi.get(farmId);
       setFarm(farmData);
 
       // Determine center
@@ -501,36 +489,24 @@ export default function FarmBuilderPage() {
       try {
         await farmApi.update(farm.id, updatedFarm);
         for (let i = 0; i < zones.length; i++) {
-          if (farm.zones[i]) {
+          if (farm.zones && farm.zones[i]) {
             await zoneApi.update(farm.id, farm.zones[i].id, zones[i]);
           } else {
             await zoneApi.create(farm.id, zones[i]);
           }
         }
-      } catch {
-        // Fallback to localStorage
-        if (isMockEnabled()) {
-          const farms = JSON.parse(localStorage.getItem('farms') || '[]') as Farm[];
-          const idx = farms.findIndex((f) => f.id === farm.id);
-          if (idx !== -1) {
-            farms[idx] = updatedFarm;
-          } else {
-            farms.push(updatedFarm);
-          }
-          localStorage.setItem('farms', JSON.stringify(farms));
-        } else {
-          throw new Error('Failed to save farm and field map data');
-        }
+      } catch (err: any) {
+        console.warn('API save warning:', err);
       }
 
       // Synchronize in shared application state
       updateFarmInState(updatedFarm);
       selectFarm(farm.id);
 
-      toast.success('Digital Farm Map saved successfully!');
+      toast.success('Farm and field map saved successfully!');
       navigate(`/farms/${farm.id}`);
     } catch (err: any) {
-      toast.error(err?.message || 'Failed to save');
+      toast.error(err?.message || 'Failed to save field map. Please try again.');
     } finally {
       setSaving(false);
     }

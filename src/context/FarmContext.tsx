@@ -31,26 +31,12 @@ export function FarmProvider({ children }: { children: React.ReactNode }) {
   const loadFarms = useCallback(async () => {
     setLoadingFarms(true);
     try {
-      let list: Farm[] = [];
-      try {
-        list = await farmApi.list();
-      } catch {
-        // Fallback to mock storage
-        if (isMockEnabled()) {
-          list = ensureDefaultFarms();
-        }
-      }
-
-      if (list.length === 0 && isMockEnabled()) {
-        list = ensureDefaultFarms();
-      }
-
-      setAllFarms(list);
-    } catch {
-      if (isMockEnabled()) {
-        const seeded = ensureDefaultFarms();
-        setAllFarms(seeded);
-      }
+      const list = await farmApi.list();
+      setAllFarms(list || []);
+    } catch (err) {
+      console.warn('Could not load farms from API:', err);
+      // Fallback only to farms previously saved locally by the user
+      setAllFarms(ensureDefaultFarms());
     } finally {
       setLoadingFarms(false);
     }

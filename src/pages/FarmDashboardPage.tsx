@@ -80,19 +80,7 @@ export default function FarmDashboardPage() {
     setLoading(true);
     setError(null);
     try {
-      let farmData: Farm;
-      try {
-        farmData = await farmApi.get(targetId);
-      } catch {
-        if (isMockEnabled()) {
-          const stored = JSON.parse(localStorage.getItem('farms') || '[]') as Farm[];
-          const found = stored.find((f) => f.id === targetId);
-          if (!found) throw new Error('Farm not found');
-          farmData = found;
-        } else {
-          throw new Error('Failed to load farm');
-        }
-      }
+      const farmData = await farmApi.get(targetId);
 
       // Ensure boundary exists
       const centerCoords = getInitialCoordinates(farmData);
@@ -224,28 +212,20 @@ export default function FarmDashboardPage() {
 
   const runBaselineSimulation = async () => {
     if (!farm) return;
+    if (!farm.zones || farm.zones.length === 0) {
+      toast.error('Add at least one field to your farm before simulating.');
+      return;
+    }
     setSimulating(true);
     try {
-      let result: SimulationResult;
-      try {
-        result = await simulationApi.run({
-          farmId: farm.id,
-          zones: farm.zones,
-        });
-      } catch {
-        if (isMockEnabled()) {
-          result = createMockSimulation(farm.id, 'Baseline', weather, farm.zones);
-          const sims = JSON.parse(localStorage.getItem('simulations') || '[]');
-          sims.push(result);
-          localStorage.setItem('simulations', JSON.stringify(sims));
-        } else {
-          throw new Error('Simulation failed');
-        }
-      }
+      const result = await simulationApi.run({
+        farmId: farm.id,
+        zones: farm.zones,
+      });
       toast.success('Simulation complete!');
       navigate(`/farms/${farm.id}/simulations/${result.id}`);
     } catch (err: any) {
-      toast.error(err?.message || 'Simulation failed');
+      toast.error(err?.message || 'Simulation failed. Please try again.');
     } finally {
       setSimulating(false);
     }

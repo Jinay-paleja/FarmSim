@@ -14,7 +14,7 @@ import {
   generateDefaultPlotBoundaries,
 } from './mapGeometry';
 
-const MOCK_ENABLED = true; // Set to false to disable mock data
+const MOCK_ENABLED = false; // Real backend API is integrated
 
 export function isMockEnabled(): boolean {
   return MOCK_ENABLED;
@@ -212,87 +212,7 @@ export function ensureDefaultFarms(): Farm[] {
   } catch {
     stored = [];
   }
-
-  const defaultSpecs = [
-    {
-      id: 'farm_green_valley',
-      ownerId: 'farmer_punjab',
-      name: 'Green Valley Farm',
-      location: 'Ludhiana, Punjab',
-      area: 12.4,
-      numberOfZones: 5,
-      latitude: 30.9010,
-      longitude: 75.8573,
-    },
-    {
-      id: 'farm_sunrise',
-      ownerId: 'farmer_california',
-      name: 'Sunrise Farm',
-      location: 'Fresno, California',
-      area: 8.7,
-      numberOfZones: 3,
-      latitude: 36.7468,
-      longitude: -119.7726,
-    },
-    {
-      id: 'farm_river',
-      ownerId: 'farmer_iowa',
-      name: 'River Farm',
-      location: 'Ames, Iowa',
-      area: 21.2,
-      numberOfZones: 4,
-      latitude: 42.0308,
-      longitude: -93.6319,
-    },
-  ];
-
-  const isInitialized = localStorage.getItem('farms_initialized') === 'true';
-
-  // Backfill ownerId for existing stored farms if missing
-  let updatedStored = false;
-  const backfilled = stored.map((f) => {
-    if (!f.ownerId) {
-      updatedStored = true;
-      if (f.id === 'farm_green_valley' || f.name.includes('Green Valley')) return { ...f, ownerId: 'farmer_punjab' };
-      if (f.id === 'farm_sunrise' || f.name.includes('Sunrise')) return { ...f, ownerId: 'farmer_california' };
-      if (f.id === 'farm_river' || f.name.includes('River')) return { ...f, ownerId: 'farmer_iowa' };
-      return { ...f, ownerId: 'farmer_punjab' };
-    }
-    return f;
-  });
-
-  // Only seed default farms on the very first initial run
-  if (!isInitialized && backfilled.length === 0) {
-    const seededFarms = defaultSpecs.map((spec) => {
-      const created = createMockFarm({
-        name: spec.name,
-        location: spec.location,
-        area: spec.area,
-        numberOfZones: spec.numberOfZones,
-        latitude: spec.latitude,
-        longitude: spec.longitude,
-        ownerId: spec.ownerId,
-      });
-      created.id = spec.id;
-      created.ownerId = spec.ownerId;
-      return created;
-    });
-
-    localStorage.setItem('farms', JSON.stringify(seededFarms));
-    localStorage.setItem('farms_initialized', 'true');
-    return seededFarms;
-  }
-
-  // Mark initialized so deletions persist
-  if (!isInitialized) {
-    localStorage.setItem('farms_initialized', 'true');
-  }
-
-  if (updatedStored) {
-    localStorage.setItem('farms', JSON.stringify(backfilled));
-  }
-
-  return backfilled;
+  return stored;
 }
 
 /**

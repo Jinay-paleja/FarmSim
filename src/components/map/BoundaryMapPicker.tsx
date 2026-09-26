@@ -10,9 +10,22 @@ import {
 } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { Undo2, X, Trash2, Pencil, Check, MapPin } from 'lucide-react';
+import {
+  Undo2,
+  X,
+  MapPin,
+  Search,
+  CheckCircle2,
+  Square,
+  RotateCcw,
+  Sparkles,
+  HelpCircle,
+  AlertCircle,
+  Loader2,
+} from 'lucide-react';
 import { calculatePolygonArea, calculatePerimeter } from '../../services/mapGeometry';
 import { geocodeLocation } from '../../services/geocoding';
+import toast from 'react-hot-toast';
 
 // Leaflet default marker icon fix for Vite
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -27,7 +40,7 @@ function createNumberedIcon(num: number) {
     className: 'boundary-marker-icon',
     html: `<div style="
       width: 28px; height: 28px;
-      background: #16a34a;
+      background: #15803d;
       color: #fff;
       border: 2.5px solid #fff;
       border-radius: 50%;
@@ -47,9 +60,10 @@ export interface BoundaryMapPickerProps {
   locationQuery: string;
   enteredAreaAcres: number;
   initialCenter?: [number, number];
+  onLocationFound?: (locationName: string, coords: [number, number]) => void;
 }
 
-/** Sub-component: handles map click events to add points */
+/** Handles map click events to add points */
 function MapClickHandler({ onAdd }: { onAdd: (latlng: [number, number]) => void }) {
   useMapEvents({
     click(e) {
@@ -59,58 +73,40 @@ function MapClickHandler({ onAdd }: { onAdd: (latlng: [number, number]) => void 
   return null;
 }
 
-/** Sub-component: handles geocoding + flyTo when location query changes */
-function MapGeocoder({ locationQuery }: { locationQuery: string }) {
+/** Exposes map controller to parent */
+function MapFlyController({
+  targetCenter,
+  zoom = 15,
+}: {
+  targetCenter?: [number, number];
+  zoom?: number;
+}) {
   const map = useMap();
-  const lastQuery = useRef('');
+  const prevCenter = useRef<string>('');
 
   useEffect(() => {
-    if (!locationQuery || locationQuery.trim().length < 2) return;
-    const trimmed = locationQuery.trim().toLowerCase();
-    if (trimmed === lastQuery.current) return;
-
-    const timer = setTimeout(async () => {
-      lastQuery.current = trimmed;
-      const result = await geocodeLocation(locationQuery);
-      if (result) {
-        map.flyTo([result.lat, result.lng], 14, { duration: 1.5 });
-      }
-    }, 800);
-
-    return () => clearTimeout(timer);
-  }, [locationQuery, map]);
+    if (!targetCenter) return;
+    const key = `${targetCenter[0]},${targetCenter[1]}`;
+    if (key === prevCenter.current) return;
+    prevCenter.current = key;
+    map.flyTo(targetCenter, zoom, { duration: 1.2 });
+  }, [targetCenter, zoom, map]);
 
   return null;
 }
 
-/** Sub-component: fits map bounds to points */
+/** Automatically fits map bounds when points change */
 function MapAutoFit({ points }: { points: [number, number][] }) {
   const map = useMap();
   const prevLen = useRef(0);
 
   useEffect(() => {
-    if (points.length >= 2 && points.length !== prevLen.current) {
+    if (points.length >= 3 && Math.abs(points.length - prevLen.current) > 1) {
       const bounds = L.latLngBounds(points.map(([lat, lng]) => [lat, lng]));
       map.fitBounds(bounds, { padding: [50, 50], maxZoom: 17 });
     }
     prevLen.current = points.length;
   }, [points, map]);
-
-  return null;
-}
-
-/** Sub-component: flies to initialCenter when it changes */
-function MapCenterUpdater({ center }: { center?: [number, number] }) {
-  const map = useMap();
-  const lastCenter = useRef<string>('');
-
-  useEffect(() => {
-    if (!center) return;
-    const key = `${center[0]},${center[1]}`;
-    if (key === lastCenter.current) return;
-    lastCenter.current = key;
-    map.flyTo(center, 14, { duration: 1.2 });
-  }, [center, map]);
 
   return null;
 }
@@ -121,18 +117,54 @@ export default function BoundaryMapPicker({
   locationQuery,
   enteredAreaAcres,
   initialCenter,
+  onLocationFound,
 }: BoundaryMapPickerProps) {
-  const [editingIndex, setEditingIndex] = useState<number | null>(null);
-  const [editLat, setEditLat] = useState('');
-  const [editLng, setEditLng] = useState('');
+  const [searchInput, setSearchInput] = useState(locationQuery || '');
+  const [isSearching, setIsSearching] = useState(false);
+  const [flyTarget, setFlyTarget] = useState<[number, number] | undefined>(initialCenter);
+  const [foundPlaceName, setFoundPlaceName] = useState<string | null>(null);
 
-  const defaultCenter: [number, number] = initialCenter || [20.5937, 78.9629];
+  const defaultCenter: [number, number] = initialCenter || [30.9010, 75.8573];
+
+  // Sync external location query
+  useEffect(() => {
+    if (locationQuery && locationQuery !== searchInput) {
+      setSearchInput(locationQuery);
+    }
+  }, [locationQuery]);
+
+  const handleSearchLocation = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!searchInput.trim() || searchInput.trim().length < 2) return;
+
+    setIsSearching(true);
+    try {
+      const result = await geocodeLocation(searchInput.trim());
+      if (result) {
+        setFlyTarget([result.lat, result.lng]);
+        setFoundPlaceName(result.displayName);
+        if (onLocationFound) {
+          onLocationFound(result.displayName, [result.lat, result.lng]);
+        }
+        toast.success(`Found: ${result.displayName.slice(0, 40)}...`);
+      } else {
+        toast.error('Location not found. Try entering a nearby town or district.');
+      }
+    } catch {
+      toast.error('Could not search location. Please try again.');
+    } finally {
+      setIsSearching(false);
+    }
+  };
 
   const handleAddPoint = useCallback((latlng: [number, number]) => {
-    onPointsChange([...points, [
-      Math.round(latlng[0] * 1000000) / 1000000,
-      Math.round(latlng[1] * 1000000) / 1000000,
-    ]]);
+    onPointsChange([
+      ...points,
+      [
+        Math.round(latlng[0] * 1000000) / 1000000,
+        Math.round(latlng[1] * 1000000) / 1000000,
+      ],
+    ]);
   }, [points, onPointsChange]);
 
   const handleDragEnd = useCallback((index: number, latlng: L.LatLng) => {
@@ -154,36 +186,28 @@ export default function BoundaryMapPicker({
     onPointsChange([]);
   }, [onPointsChange]);
 
-  const handleDeletePoint = useCallback((index: number) => {
-    onPointsChange(points.filter((_, i) => i !== index));
-    if (editingIndex === index) setEditingIndex(null);
-  }, [points, onPointsChange, editingIndex]);
+  // Quick 1-click standard field box centered on current view
+  const handleDropSimpleBox = () => {
+    const center = flyTarget || (points.length > 0 ? points[0] : defaultCenter);
+    const targetAcres = enteredAreaAcres > 0 ? enteredAreaAcres : 10;
+    
+    // Compute square box matching the target acreage
+    const sideM = Math.sqrt(targetAcres * 4046.86) / 2;
+    const dLat = sideM / 111320;
+    const dLng = sideM / (111320 * Math.cos((center[0] * Math.PI) / 180));
 
-  const handleStartEdit = (index: number) => {
-    setEditingIndex(index);
-    setEditLat(points[index][0].toFixed(6));
-    setEditLng(points[index][1].toFixed(6));
-  };
-
-  const handleSaveEdit = () => {
-    if (editingIndex === null) return;
-    const lat = parseFloat(editLat);
-    const lng = parseFloat(editLng);
-    if (isNaN(lat) || isNaN(lng) || lat < -90 || lat > 90 || lng < -180 || lng > 180) return;
-    const updated = [...points];
-    updated[editingIndex] = [
-      Math.round(lat * 1000000) / 1000000,
-      Math.round(lng * 1000000) / 1000000,
+    const box: [number, number][] = [
+      [center[0] + dLat, center[1] - dLng],
+      [center[0] + dLat, center[1] + dLng],
+      [center[0] - dLat, center[1] + dLng],
+      [center[0] - dLat, center[1] - dLng],
     ];
-    onPointsChange(updated);
-    setEditingIndex(null);
+
+    onPointsChange(box);
+    toast.success(`Created simple field box matching ~${targetAcres} acres. Drag any corner to adjust!`);
   };
 
-  const handleCancelEdit = () => {
-    setEditingIndex(null);
-  };
-
-  // Area calculation
+  // Real-time Area & Perimeter Calculations
   const areaCalc = useMemo(() => {
     if (points.length < 3) return null;
     return calculatePolygonArea(points);
@@ -194,75 +218,120 @@ export default function BoundaryMapPicker({
     return calculatePerimeter(points);
   }, [points]);
 
-  const areaDiffPercent = useMemo(() => {
-    if (!areaCalc || enteredAreaAcres <= 0) return 0;
-    return Math.abs(((areaCalc.acres - enteredAreaAcres) / enteredAreaAcres) * 100);
-  }, [areaCalc, enteredAreaAcres]);
-
   return (
-    <div className="space-y-4">
-      {/* Controls Bar */}
-      <div className="flex flex-wrap items-center gap-2">
-        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-farm-green-pale text-farm-green text-xs font-bold">
-          <MapPin className="w-3.5 h-3.5" />
-          {points.length} point{points.length !== 1 ? 's' : ''}
+    <div className="space-y-3">
+      {/* 1. Location Search Bar */}
+      <form
+        onSubmit={handleSearchLocation}
+        className="flex flex-col sm:flex-row gap-2 bg-stone-50 dark:bg-gray-800 p-2.5 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xs"
+      >
+        <div className="relative flex-1">
+          <MapPin className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-emerald-600" />
+          <input
+            type="text"
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            placeholder="Search village, city, district, or pin code..."
+            className="w-full pl-10 pr-3 py-2 text-sm rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+          />
         </div>
         <button
-          type="button"
-          onClick={handleUndo}
-          disabled={points.length === 0}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 text-xs font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          type="submit"
+          disabled={isSearching || !searchInput.trim()}
+          className="btn-primary py-2 px-5 text-sm flex items-center justify-center gap-2 whitespace-nowrap"
         >
-          <Undo2 className="w-3.5 h-3.5" />
-          Undo Last
+          {isSearching ? (
+            <>
+              <Loader2 className="w-4 h-4 animate-spin" />
+              Searching...
+            </>
+          ) : (
+            <>
+              <Search className="w-4 h-4" />
+              Find Location
+            </>
+          )}
         </button>
-        <button
-          type="button"
-          onClick={handleClear}
-          disabled={points.length === 0}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-red-200 text-xs font-medium text-red-600 hover:bg-red-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-        >
-          <X className="w-3.5 h-3.5" />
-          Clear All
-        </button>
-        {points.length > 0 && points.length < 3 && (
-          <span className="text-xs text-amber-600 font-medium ml-auto">
-            Need {3 - points.length} more point{3 - points.length > 1 ? 's' : ''} for polygon
-          </span>
-        )}
-        {points.length >= 3 && areaCalc && (
-          <span className="text-xs text-farm-green font-bold ml-auto">
-            Mapped: {areaCalc.acres} acres
-          </span>
-        )}
+      </form>
+
+      {/* 2. Farmer Guidance & Drawing Toolbar */}
+      <div className="flex flex-wrap items-center justify-between gap-2 p-3 bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-xs">
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={handleDropSimpleBox}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 text-xs font-bold hover:bg-emerald-100 transition-colors"
+          >
+            <Square className="w-3.5 h-3.5" />
+            Quick Field Box
+          </button>
+          <button
+            type="button"
+            onClick={handleUndo}
+            disabled={points.length === 0}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-gray-200 dark:border-gray-700 text-xs font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          >
+            <Undo2 className="w-3.5 h-3.5" />
+            Undo Corner
+          </button>
+          <button
+            type="button"
+            onClick={handleClear}
+            disabled={points.length === 0}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-red-200 dark:border-red-900/60 text-xs font-semibold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          >
+            <RotateCcw className="w-3.5 h-3.5" />
+            Redraw
+          </button>
+        </div>
+
+        {/* Live Area Indicator */}
+        <div>
+          {points.length >= 3 && areaCalc ? (
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-emerald-500 text-white text-xs font-black shadow-xs">
+              <CheckCircle2 className="w-4 h-4" />
+              <span>Farm Area: {areaCalc.acres} acres ({areaCalc.hectares} ha)</span>
+            </div>
+          ) : (
+            <div className="flex items-center gap-1.5 text-xs text-amber-700 dark:text-amber-400 font-medium">
+              <AlertCircle className="w-3.5 h-3.5" />
+              <span>
+                {points.length === 0
+                  ? 'Click points on the map to outline your farm boundary'
+                  : `Click ${3 - points.length} more corner${3 - points.length > 1 ? 's' : ''} to enclose field`}
+              </span>
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* Map */}
-      <div className="rounded-xl border border-gray-200 overflow-hidden shadow-sm" style={{ position: 'relative' }}>
+      {/* 3. Interactive Leaflet Map */}
+      <div className="rounded-2xl border-2 border-emerald-600/30 overflow-hidden shadow-md relative">
         <MapContainer
           center={defaultCenter}
-          zoom={13}
+          zoom={14}
           scrollWheelZoom={true}
-          style={{ height: '500px', width: '100%' }}
+          style={{ height: '480px', width: '100%' }}
           className="z-0"
         >
+          {/* Satellite Map with Labels */}
           <TileLayer
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            attribution='&copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
+            url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+            maxZoom={18}
           />
 
           <MapClickHandler onAdd={handleAddPoint} />
-          <MapGeocoder locationQuery={locationQuery} />
+          <MapFlyController targetCenter={flyTarget} zoom={15} />
           <MapAutoFit points={points} />
-          <MapCenterUpdater center={initialCenter} />
 
-          {/* Markers */}
+          {/* Numbered Draggable Corner Markers */}
           {points.map((point, idx) => (
             <Marker
-              key={`marker-${idx}`}
+              key={`corner-${idx}-${point[0]}-${point[1]}`}
               position={point}
               icon={createNumberedIcon(idx + 1)}
-              draggable
+              draggable={true}
               eventHandlers={{
                 dragend: (e) => {
                   handleDragEnd(idx, e.target.getLatLng());
@@ -271,157 +340,54 @@ export default function BoundaryMapPicker({
             />
           ))}
 
-          {/* Polyline for 2 points */}
+          {/* Connected Lines for 2 points */}
           {points.length === 2 && (
             <Polyline
               positions={points}
-              pathOptions={{ color: '#16a34a', weight: 3, dashArray: '8 4' }}
+              pathOptions={{ color: '#22c55e', weight: 3, dashArray: '6 6' }}
             />
           )}
 
-          {/* Polygon for 3+ points */}
+          {/* Enclosed Polygon for 3+ points */}
           {points.length >= 3 && (
             <Polygon
               positions={points}
               pathOptions={{
                 color: '#15803d',
-                weight: 3,
-                fillColor: '#16a34a',
-                fillOpacity: 0.25,
+                weight: 3.5,
+                fillColor: '#22c55e',
+                fillOpacity: 0.35,
               }}
             />
           )}
         </MapContainer>
 
-        {/* Map overlay instruction */}
+        {/* Helpful Farmer Guidance Overlays */}
         {points.length === 0 && (
-          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-[400] bg-white/90 backdrop-blur-sm rounded-xl px-4 py-2 shadow-lg border border-gray-200 text-sm text-gray-600 font-medium pointer-events-none">
-            👆 Click on the map to add boundary points
+          <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[400] bg-white/95 dark:bg-gray-900/95 backdrop-blur-md rounded-2xl px-5 py-2.5 shadow-xl border border-gray-200 dark:border-gray-700 text-xs text-gray-800 dark:text-gray-200 font-semibold flex items-center gap-2 pointer-events-none">
+            <MapPin className="w-4 h-4 text-emerald-600" />
+            <span>Click anywhere around your field to place boundary corners</span>
+          </div>
+        )}
+
+        {points.length >= 3 && (
+          <div className="absolute bottom-4 left-4 z-[400] bg-stone-900/90 text-white backdrop-blur-md rounded-xl px-3 py-1.5 text-[11px] font-medium border border-white/10 shadow-lg pointer-events-none">
+            💡 Tip: Click and drag any numbered corner to fine-tune your field boundary.
           </div>
         )}
       </div>
 
-      {/* Coordinate List */}
-      {points.length > 0 && (
-        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-          <div className="px-4 py-2.5 bg-stone-50 border-b border-gray-100">
-            <h4 className="text-xs font-bold text-gray-700 uppercase tracking-wider">
-              Boundary Points ({points.length})
-            </h4>
+      {/* 4. Bottom Confirmation Bar */}
+      {points.length >= 3 && areaCalc && (
+        <div className="p-3.5 rounded-2xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 flex items-center justify-between text-xs">
+          <div className="flex items-center gap-2">
+            <span className="text-gray-600 dark:text-gray-300 font-medium">Selected Field Boundary:</span>
+            <b className="text-emerald-700 dark:text-emerald-400 font-black text-sm">{areaCalc.acres} Acres</b>
+            <span className="text-gray-400">({areaCalc.hectares} Hectares • {points.length} Corners)</span>
           </div>
-          <div className="max-h-52 overflow-y-auto divide-y divide-gray-50">
-            {points.map((point, idx) => (
-              <div
-                key={`coord-${idx}`}
-                className="flex items-center gap-3 px-4 py-2 text-xs hover:bg-stone-50 transition-colors"
-              >
-                <span className="w-7 h-7 rounded-full bg-farm-green text-white flex items-center justify-center font-bold text-[11px] flex-shrink-0">
-                  {idx + 1}
-                </span>
-
-                {editingIndex === idx ? (
-                  <>
-                    <div className="flex items-center gap-1.5 flex-1 min-w-0">
-                      <span className="text-gray-400 font-medium">Lat:</span>
-                      <input
-                        type="number"
-                        step="0.000001"
-                        value={editLat}
-                        onChange={(e) => setEditLat(e.target.value)}
-                        className="w-28 px-2 py-1 rounded border border-gray-300 text-xs focus:outline-none focus:border-farm-green"
-                      />
-                      <span className="text-gray-400 font-medium ml-1">Lng:</span>
-                      <input
-                        type="number"
-                        step="0.000001"
-                        value={editLng}
-                        onChange={(e) => setEditLng(e.target.value)}
-                        className="w-28 px-2 py-1 rounded border border-gray-300 text-xs focus:outline-none focus:border-farm-green"
-                      />
-                    </div>
-                    <button
-                      type="button"
-                      onClick={handleSaveEdit}
-                      className="p-1 rounded text-farm-green hover:bg-farm-green-pale transition-colors"
-                      title="Save"
-                    >
-                      <Check className="w-3.5 h-3.5" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleCancelEdit}
-                      className="p-1 rounded text-gray-400 hover:bg-gray-100 transition-colors"
-                      title="Cancel"
-                    >
-                      <X className="w-3.5 h-3.5" />
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <div className="flex items-center gap-3 flex-1 min-w-0 text-gray-600">
-                      <span>
-                        <span className="text-gray-400">Lat:</span>{' '}
-                        <span className="font-mono font-medium text-gray-800">{point[0].toFixed(6)}</span>
-                      </span>
-                      <span>
-                        <span className="text-gray-400">Lng:</span>{' '}
-                        <span className="font-mono font-medium text-gray-800">{point[1].toFixed(6)}</span>
-                      </span>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => handleStartEdit(idx)}
-                      className="p-1 rounded text-gray-400 hover:text-farm-green hover:bg-farm-green-pale transition-colors"
-                      title="Edit coordinates"
-                    >
-                      <Pencil className="w-3.5 h-3.5" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleDeletePoint(idx)}
-                      className="p-1 rounded text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"
-                      title="Delete point"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  </>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Area Comparison */}
-      {areaCalc && (
-        <div className="bg-stone-50 rounded-xl p-4 border border-gray-100 space-y-2">
-          <div className="flex flex-wrap items-center gap-x-6 gap-y-1 text-sm">
-            <div>
-              <span className="text-gray-500">Entered Area:</span>{' '}
-              <span className="font-bold text-gray-800">{enteredAreaAcres} acres</span>
-            </div>
-            <div>
-              <span className="text-gray-500">Mapped Area:</span>{' '}
-              <span className="font-bold text-farm-green">{areaCalc.acres} acres</span>
-            </div>
-            <div className="text-xs text-gray-400">
-              {areaCalc.hectares} ha &nbsp;•&nbsp; {areaCalc.squareMeters.toLocaleString()} m²
-            </div>
-          </div>
-          {perimeterCalc && (
-            <div className="text-xs text-gray-400">
-              Perimeter: {perimeterCalc.meters.toLocaleString()} m ({perimeterCalc.kilometers} km)
-            </div>
-          )}
-          {areaDiffPercent > 10 && (
-            <div className="flex items-start gap-2 mt-1 p-2.5 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-xs">
-              <span className="text-amber-500 mt-0.5">⚠️</span>
-              <span>
-                Mapped area differs from the entered farm area by <strong>{areaDiffPercent.toFixed(0)}%</strong>.
-                You can adjust either value or keep both — the boundary polygon will be saved alongside your entered area.
-              </span>
-            </div>
-          )}
+          <span className="text-emerald-700 dark:text-emerald-400 font-bold flex items-center gap-1">
+            <CheckCircle2 className="w-4 h-4" /> Ready to Save
+          </span>
         </div>
       )}
     </div>

@@ -47,6 +47,13 @@ export default function FarmCreatePage() {
     return calculatePolygonArea(boundaryPoints);
   }, [boundaryPoints]);
 
+  // Auto-sync form.area from mapped polygon calculation
+  useEffect(() => {
+    if (mappedArea && mappedArea.acres > 0) {
+      setForm((prev) => ({ ...prev, area: mappedArea.acres }));
+    }
+  }, [mappedArea]);
+
   const validate = (): boolean => {
     const newErrors: Partial<Record<string, string>> = {};
     if (!form.name.trim()) newErrors.name = 'Farm name is required';
@@ -310,6 +317,12 @@ export default function FarmCreatePage() {
               locationQuery={form.location}
               enteredAreaAcres={form.area}
               initialCenter={mapCenter}
+              onLocationFound={(placeName, coords) => {
+                updateField('location', placeName);
+                updateField('latitude', coords[0]);
+                updateField('longitude', coords[1]);
+                setMapCenter(coords);
+              }}
             />
 
             {errors.boundary && (

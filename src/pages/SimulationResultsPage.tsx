@@ -64,19 +64,7 @@ export default function SimulationResultsPage() {
     setError(null);
     try {
       // 1. Load Simulation Result
-      let simData: SimulationResult;
-      try {
-        simData = await simulationApi.get(simId);
-      } catch {
-        if (isMockEnabled()) {
-          const stored = JSON.parse(localStorage.getItem('simulations') || '[]') as SimulationResult[];
-          const found = stored.find((s) => s.id === simId);
-          if (!found) throw new Error('Simulation not found');
-          simData = found;
-        } else {
-          throw new Error('Failed to load simulation');
-        }
-      }
+      const simData = await simulationApi.get(simId);
       setResult(simData);
 
       // 2. Load Farm for Map
@@ -85,11 +73,7 @@ export default function SimulationResultsPage() {
           const farmData = await farmApi.get(farmId);
           setFarm(farmData);
         } catch {
-          if (isMockEnabled()) {
-            const storedFarms = JSON.parse(localStorage.getItem('farms') || '[]') as Farm[];
-            const foundFarm = storedFarms.find((f) => f.id === farmId);
-            if (foundFarm) setFarm(foundFarm);
-          }
+          // ignore optional farm load error
         }
       }
     } catch (err: any) {

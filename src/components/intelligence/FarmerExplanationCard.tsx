@@ -55,7 +55,7 @@ export default function FarmerExplanationCard({
               </span>
             </div>
             <p className="text-xs text-gray-300 mt-0.5">
-              Deterministic Agronomic Synthesis for: <b className="text-white">{scenarioName}</b>
+              Simulation Analysis for: <b className="text-white">{scenarioName}</b>
             </p>
           </div>
         </div>
