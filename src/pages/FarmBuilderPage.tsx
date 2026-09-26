@@ -5,6 +5,7 @@ import {
   Maximize2, Crosshair, AlertTriangle, Check, Undo2,
   Trash2, Settings2, Loader2, Sprout, Wheat, Droplets,
   Edit3, Compass, CheckCircle2, ChevronRight, HelpCircle, Brain,
+  Ruler, Move,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { farmApi, zoneApi } from '../services/api';
@@ -20,6 +21,7 @@ import DigitalFarmMap, {
 import FieldDetailsPanel from '../components/map/FieldDetailsPanel';
 import WeatherCard from '../components/weather/WeatherCard';
 import FarmIntelligencePanel from '../components/intelligence/FarmIntelligencePanel';
+import AreaShapeEditorModal from '../components/map/AreaShapeEditorModal';
 import { useFarmWeather } from '../hooks/useFarmWeather';
 import { useFarmContext } from '../context/FarmContext';
 import { analyzeFarmIntelligence } from '../services/farmIntelligence';
@@ -39,6 +41,7 @@ import {
   getPolygonCenter,
   doPolygonsOverlap,
   isPolygonInsidePolygon,
+  translatePolygon,
 } from '../services/mapGeometry';
 
 function getInitialCoordinates(farm: Farm): [number, number] {
@@ -82,6 +85,8 @@ export default function FarmBuilderPage() {
   const [activeLayer, setActiveLayer] = useState<BaseMapLayer>('satellite');
   const [viewMode, setViewMode] = useState<FieldViewMode>('health');
   const [isEditingVertices, setIsEditingVertices] = useState(false);
+  const [isMoveMode, setIsMoveMode] = useState(false);
+  const [isAreaShapeModalOpen, setIsAreaShapeModalOpen] = useState(false);
   const [validationWarning, setValidationWarning] = useState<string | null>(null);
   const [sidebarTab, setSidebarTab] = useState<'plots' | 'intelligence'>('plots');
   const [showWeatherOverlay, setShowWeatherOverlay] = useState(false);
@@ -352,6 +357,57 @@ export default function FarmBuilderPage() {
     });
   };
 
+  // Handler: Move farm (deltaLat, deltaLng)
+  const handleMoveFarm = (deltaLat: number, deltaLng: number, movePlots: boolean = true) => {
+    if (!farmBoundary) return;
+    const movedBoundary = translatePolygon(farmBoundary, deltaLat, deltaLng);
+    setFarmBoundary(movedBoundary);
+
+    if (movePlots && zones.length > 0) {
+      setZones((prev) =>
+        prev.map((z) => {
+          if (!z.boundary || z.boundary.length === 0) return z;
+          return {
+            ...z,
+            boundary: translatePolygon(z.boundary, deltaLat, deltaLng),
+          };
+        })
+      );
+    }
+    toast.success('Farm boundary repositioned');
+  };
+
+  // Handler: Move zone (deltaLat, deltaLng)
+  const handleMoveZone = (zoneIdx: number, deltaLat: number, deltaLng: number) => {
+    setZones((prev) => {
+      const updated = [...prev];
+      if (updated[zoneIdx]?.boundary) {
+        updated[zoneIdx] = {
+          ...updated[zoneIdx],
+          boundary: translatePolygon(updated[zoneIdx].boundary!, deltaLat, deltaLng),
+        };
+      }
+      return updated;
+    });
+    toast.success(`Moved ${zones[zoneIdx]?.name}`);
+  };
+
+  // Handler: Update both farm and zones simultaneously (for proportional area scaling)
+  const handleUpdateFarmAndZones = (newFarmBoundary: [number, number][], updatedZones: ZoneInput[]) => {
+    setFarmBoundary(newFarmBoundary);
+    setZones(updatedZones);
+    const measured = calculatePolygonArea(newFarmBoundary);
+    if (farm) {
+      setFarm({
+        ...farm,
+        area: measured.acres,
+        boundary: newFarmBoundary,
+        boundaryAreaAcres: measured.acres,
+        boundaryAreaHectares: measured.hectares,
+      });
+    }
+  };
+
   // Handler: update zone attribute
   const handleUpdateZoneField = (zoneIdx: number, key: keyof ZoneInput, value: any) => {
     setZones((prev) => {
@@ -575,6 +631,34 @@ export default function FarmBuilderPage() {
               {isEditingVertices ? 'Finish Editing' : 'Edit Vertices'}
             </button>
 
+            {/* Size, Shape & Dimensions Modal Button */}
+            <button
+              onClick={() => setIsAreaShapeModalOpen(true)}
+              className="px-3 py-1.5 rounded-xl border border-emerald-300 bg-emerald-50 hover:bg-emerald-100 text-emerald-900 text-xs font-bold flex items-center gap-1.5 transition-all shadow-xs cursor-pointer"
+              title="Edit size in acres/ha, adjust rectangle width/height, sketch, or move"
+            >
+              <Ruler className="w-3.5 h-3.5 text-emerald-700" />
+              <span>📐 Size & Dimensions</span>
+            </button>
+
+            {/* Move Area Pin Toggle */}
+            <button
+              onClick={() => {
+                const next = !isMoveMode;
+                setIsMoveMode(next);
+                toast(next ? 'Move mode active: drag ✥ center pin to move area' : 'Move mode disabled', { icon: '✥' });
+              }}
+              className={`px-3 py-1.5 rounded-xl border text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                isMoveMode
+                  ? 'bg-blue-600 text-white border-blue-700 shadow-xs'
+                  : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'
+              }`}
+              title="Drag center pin to move entire farm or selected field"
+            >
+              <Move className="w-3.5 h-3.5" />
+              <span>{isMoveMode ? 'Moving Active' : 'Move Area'}</span>
+            </button>
+
             {/* Map Tile Layer Toggle */}
             <div className="flex items-center bg-gray-100 rounded-xl p-0.5 border border-gray-200 text-xs">
               <button
@@ -692,11 +776,14 @@ export default function FarmBuilderPage() {
             activeLayer={activeLayer}
             viewMode={viewMode}
             isEditingVertices={isEditingVertices}
+            isMoveMode={isMoveMode}
             liveWeather={weather}
             onSelectZone={(idx) => setSelectedZoneIndex(idx)}
             onUpdateFarmBoundary={handleUpdateFarmBoundary}
             onAddFieldWithGeometry={handleAddFieldWithGeometry}
             onUpdateZoneBoundary={handleUpdateZoneBoundary}
+            onMoveFarm={(dLat, dLng) => handleMoveFarm(dLat, dLng, true)}
+            onMoveZone={handleMoveZone}
             onCancelDrawing={() => setDrawingTool('none')}
             onValidationWarning={(w) => setValidationWarning(w)}
           />
@@ -729,6 +816,7 @@ export default function FarmBuilderPage() {
               onUpdate={handleUpdateZoneField}
               onDelete={handleDeleteZone}
               onClose={() => setSelectedZoneIndex(null)}
+              onOpenDimensionEditor={() => setIsAreaShapeModalOpen(true)}
               onCenterField={() => {
                 if (zones[selectedZoneIndex].boundary) {
                   const center = getPolygonCenter(zones[selectedZoneIndex].boundary!);
@@ -879,6 +967,28 @@ export default function FarmBuilderPage() {
           )}
         </div>
       </div>
+
+      {/* Area, Shape, Rectangle Dimensions & Move Modal */}
+      <AreaShapeEditorModal
+        isOpen={isAreaShapeModalOpen}
+        onClose={() => setIsAreaShapeModalOpen(false)}
+        farmName={farm.name}
+        farmBoundary={farmBoundary}
+        zones={zones}
+        selectedZoneIndex={selectedZoneIndex}
+        onSelectZone={(idx) => setSelectedZoneIndex(idx)}
+        onUpdateFarmBoundary={handleUpdateFarmBoundary}
+        onUpdateZoneBoundary={handleUpdateZoneBoundary}
+        onUpdateFarmAndZones={handleUpdateFarmAndZones}
+        onStartDrawingTool={(tool, target) => {
+          setDrawingTarget(target);
+          setDrawingTool(tool);
+        }}
+        isEditingVertices={isEditingVertices}
+        onToggleVertexEditing={() => setIsEditingVertices(!isEditingVertices)}
+        isMoveMode={isMoveMode}
+        onToggleMoveMode={() => setIsMoveMode(!isMoveMode)}
+      />
     </div>
   );
 }

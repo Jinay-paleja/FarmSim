@@ -500,3 +500,104 @@ export function generateDefaultPlotBoundaries(
 
   return plots;
 }
+
+/**
+ * Converts area units.
+ */
+export function acresToHectares(acres: number): number {
+  return Math.round((acres / 2.47105381) * 100) / 100;
+}
+
+export function hectaresToAcres(hectares: number): number {
+  return Math.round((hectares * 2.47105381) * 100) / 100;
+}
+
+export function sqMetersToAcres(sqMeters: number): number {
+  return Math.round((sqMeters / 4046.8564224) * 100) / 100;
+}
+
+export function acresToSqMeters(acres: number): number {
+  return Math.round(acres * 4046.8564224);
+}
+
+/**
+ * Translates (shifts) an entire polygon by delta lat/lng.
+ */
+export function translatePolygon(
+  polygon: [number, number][],
+  deltaLat: number,
+  deltaLng: number
+): [number, number][] {
+  if (!polygon || polygon.length === 0) return [];
+  return polygon.map(([lat, lng]) => [lat + deltaLat, lng + deltaLng]);
+}
+
+/**
+ * Gets approximate width and height of polygon in meters.
+ */
+export function getPolygonDimensions(polygon: [number, number][]): {
+  widthMeters: number;
+  heightMeters: number;
+} {
+  if (!polygon || polygon.length < 2) {
+    return { widthMeters: 0, heightMeters: 0 };
+  }
+  const bounds = getPolygonBounds(polygon);
+  const minLat = bounds[0][0];
+  const maxLat = bounds[1][0];
+  const minLng = bounds[0][1];
+  const maxLng = bounds[1][1];
+
+  const midLat = (minLat + maxLat) / 2;
+  const heightMeters = haversineDistance([minLat, minLng], [maxLat, minLng]);
+  const widthMeters = haversineDistance([midLat, minLng], [midLat, maxLng]);
+
+  return {
+    widthMeters: Math.round(widthMeters),
+    heightMeters: Math.round(heightMeters),
+  };
+}
+
+/**
+ * Generates an axis-aligned rectangle with specific width and height in meters centered around a coordinate.
+ */
+export function createRectangleAroundCenter(
+  center: [number, number],
+  widthMeters: number,
+  heightMeters: number
+): [number, number][] {
+  const [cLat, cLng] = center;
+  const halfH = heightMeters / 2;
+  const halfW = widthMeters / 2;
+
+  const dLat = halfH / 111320;
+  const dLng = halfW / (111320 * Math.cos((cLat * Math.PI) / 180));
+
+  return [
+    [cLat + dLat, cLng - dLng],
+    [cLat + dLat, cLng + dLng],
+    [cLat - dLat, cLng + dLng],
+    [cLat - dLat, cLng - dLng],
+  ];
+}
+
+/**
+ * Scales an existing polygon proportionally around its centroid to match a target area in acres.
+ */
+export function scalePolygonToArea(
+  polygon: [number, number][],
+  targetAcres: number
+): [number, number][] {
+  if (!polygon || polygon.length < 3 || targetAcres <= 0) return polygon;
+  const currentArea = calculatePolygonArea(polygon).acres;
+  if (currentArea <= 0.0001) return polygon;
+
+  const scaleFactor = Math.sqrt(targetAcres / currentArea);
+  const [cLat, cLng] = getPolygonCenter(polygon);
+
+  return polygon.map(([lat, lng]) => {
+    const newLat = cLat + (lat - cLat) * scaleFactor;
+    const newLng = cLng + (lng - cLng) * scaleFactor;
+    return [newLat, newLng];
+  });
+}

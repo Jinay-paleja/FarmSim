@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import {
   X, Trash2, Crosshair, Droplets, Thermometer, CloudRain,
   Sprout, Heart, Bug, FlaskConical, Wheat, Info, AlertTriangle,
-  Layers, CheckCircle2, ShieldAlert
+  Layers, CheckCircle2, ShieldAlert, Ruler
 } from 'lucide-react';
 import type { ZoneInput, CropType, SoilType, GrowthStage, IrrigationMethod } from '../../types';
 import {
@@ -19,6 +19,7 @@ interface FieldDetailsPanelProps {
   onDelete: (index: number) => void;
   onClose: () => void;
   onCenterField: () => void;
+  onOpenDimensionEditor?: () => void;
 }
 
 export default function FieldDetailsPanel({
@@ -29,6 +30,7 @@ export default function FieldDetailsPanel({
   onDelete,
   onClose,
   onCenterField,
+  onOpenDimensionEditor,
 }: FieldDetailsPanelProps) {
   const [activeTab, setActiveTab] = useState<'overview' | 'crop' | 'soil' | 'microclimate' | 'fertilizer' | 'health'>('overview');
 
@@ -96,6 +98,16 @@ export default function FieldDetailsPanel({
             />
           </div>
           <div className="flex items-center gap-1">
+            {onOpenDimensionEditor && (
+              <button
+                type="button"
+                onClick={onOpenDimensionEditor}
+                title="Edit size in acres/ha, width/height dimensions & move plot"
+                className="p-1.5 text-gray-500 hover:text-emerald-700 hover:bg-emerald-50 rounded-lg transition-colors cursor-pointer"
+              >
+                <Ruler className="w-4 h-4 text-emerald-600" />
+              </button>
+            )}
             <button
               onClick={onCenterField}
               title="Focus map on this field"

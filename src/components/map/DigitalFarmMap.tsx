@@ -61,6 +61,14 @@ const vertexIcon = L.divIcon({
   iconAnchor: [7, 7],
 });
 
+// Custom move center pin icon for repositioning polygons
+const movePinIcon = L.divIcon({
+  className: 'custom-move-pin',
+  html: `<div style="width: 28px; height: 28px; background: #2563eb; color: #ffffff; border: 2.5px solid #ffffff; border-radius: 50%; box-shadow: 0 3px 8px rgba(0,0,0,0.45); display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: bold; cursor: move;" title="Drag center to move area">✥</div>`,
+  iconSize: [28, 28],
+  iconAnchor: [14, 14],
+});
+
 export type DrawingTool = 'none' | 'polygon' | 'rectangle' | 'circle';
 export type DrawingTarget = 'farm_boundary' | 'field';
 export type BaseMapLayer = 'satellite' | 'streets' | 'topo';
@@ -78,10 +86,13 @@ export interface DigitalFarmMapProps {
   activeLayer?: BaseMapLayer;
   viewMode?: FieldViewMode;
   isEditingVertices?: boolean;
+  isMoveMode?: boolean;
   onSelectZone?: (index: number | null) => void;
   onUpdateFarmBoundary?: (coords: [number, number][], shape: 'polygon' | 'rectangle' | 'circle') => void;
   onAddFieldWithGeometry?: (coords: [number, number][], shape: 'polygon' | 'rectangle' | 'circle') => void;
   onUpdateZoneBoundary?: (zoneIndex: number, coords: [number, number][]) => void;
+  onMoveFarm?: (deltaLat: number, deltaLng: number) => void;
+  onMoveZone?: (zoneIndex: number, deltaLat: number, deltaLng: number) => void;
   onCancelDrawing?: () => void;
   onValidationWarning?: (warning: string | null) => void;
   // Simulation specific props:
@@ -355,10 +366,13 @@ export default function DigitalFarmMap({
   activeLayer = 'satellite',
   viewMode = 'health',
   isEditingVertices = false,
+  isMoveMode = false,
   onSelectZone = () => {},
   onUpdateFarmBoundary = () => {},
   onAddFieldWithGeometry = () => {},
   onUpdateZoneBoundary = () => {},
+  onMoveFarm,
+  onMoveZone,
   onCancelDrawing = () => {},
   onValidationWarning = () => {},
   simulatedWeatherCondition,
@@ -816,6 +830,59 @@ export default function DigitalFarmMap({
                   }}
                 />
               ))
+            )}
+          </>
+        )}
+
+        {/* 3b. REPOSITION / MOVE CENTER PINS */}
+        {(isMoveMode || isEditingVertices) && (
+          <>
+            {/* Farm Move Center Pin */}
+            {farmBoundary && farmBoundary.length >= 3 && selectedZoneIndex === null && (
+              <Marker
+                position={getPolygonCenter(farmBoundary)}
+                icon={movePinIcon}
+                draggable={true}
+                eventHandlers={{
+                  dragend(e) {
+                    const newPos = e.target.getLatLng();
+                    const oldCenter = getPolygonCenter(farmBoundary);
+                    const deltaLat = newPos.lat - oldCenter[0];
+                    const deltaLng = newPos.lng - oldCenter[1];
+                    if (onMoveFarm) onMoveFarm(deltaLat, deltaLng);
+                  },
+                }}
+              >
+                <Tooltip permanent={true} direction="top" offset={[0, -16]}>
+                  <div className="text-[11px] font-bold text-blue-700 bg-white px-2 py-0.5 rounded shadow-sm border border-blue-200">
+                    ✥ Drag to Move Farm
+                  </div>
+                </Tooltip>
+              </Marker>
+            )}
+
+            {/* Selected Field Move Center Pin */}
+            {selectedZoneIndex !== null && zones[selectedZoneIndex]?.boundary && zones[selectedZoneIndex].boundary!.length >= 3 && (
+              <Marker
+                position={getPolygonCenter(zones[selectedZoneIndex].boundary!)}
+                icon={movePinIcon}
+                draggable={true}
+                eventHandlers={{
+                  dragend(e) {
+                    const newPos = e.target.getLatLng();
+                    const oldCenter = getPolygonCenter(zones[selectedZoneIndex].boundary!);
+                    const deltaLat = newPos.lat - oldCenter[0];
+                    const deltaLng = newPos.lng - oldCenter[1];
+                    if (onMoveZone) onMoveZone(selectedZoneIndex, deltaLat, deltaLng);
+                  },
+                }}
+              >
+                <Tooltip permanent={true} direction="top" offset={[0, -16]}>
+                  <div className="text-[11px] font-bold text-emerald-800 bg-white px-2 py-0.5 rounded shadow-sm border border-emerald-200">
+                    ✥ Drag to Move {zones[selectedZoneIndex].name}
+                  </div>
+                </Tooltip>
+              </Marker>
             )}
           </>
         )}
