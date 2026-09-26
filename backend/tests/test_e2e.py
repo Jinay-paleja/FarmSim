@@ -2,6 +2,14 @@
 
 from __future__ import annotations
 
+import sys
+from pathlib import Path
+
+backend_dir = Path(__file__).resolve().parents[1]
+if str(backend_dir) in sys.path:
+    sys.path.remove(str(backend_dir))
+sys.path.insert(0, str(backend_dir))
+
 from fastapi.testclient import TestClient
 
 from app.config import Settings

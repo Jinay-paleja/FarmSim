@@ -6,9 +6,18 @@ from datetime import datetime, timedelta, timezone
 import hashlib
 import hmac
 import os
+from pathlib import Path
 from secrets import token_urlsafe
+import sys
 from typing import Any
 from uuid import uuid4
+
+# Ensure project root and backend dir are discoverable
+_backend_dir = Path(__file__).resolve().parent.parent
+_repo_root = _backend_dir.parent
+for _p in [str(_repo_root), str(_backend_dir)]:
+    if _p not in sys.path:
+        sys.path.insert(0, _p)
 
 from fastapi import APIRouter, FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
@@ -19,6 +28,8 @@ from .config import Settings, settings
 from .repository import FirestoreRepository, Repository, RepositoryError, create_repository
 from .schemas import (
     AnalyzeRiskRequest,
+    AuthResponse,
+    AuthUser,
     CompareRequest,
     ComparisonResult,
     ComparisonSimulation,
@@ -167,7 +178,7 @@ def create_api_router(
     def profile_with_session(user: User) -> UserProfile:
         token = token_urlsafe(32)
         sessions[token] = (user.user_id, utc_now() + timedelta(hours=12))
-        return UserProfile.model_validate(user).model_copy(update={"session_token": token})
+        return UserProfile.model_validate(user.model_dump()).model_copy(update={"session_token": token})
 
     def owned_farm(farm_id: str, request: Request) -> dict[str, Any]:
         farm = build_farm(repository, farm_id)
@@ -293,6 +304,64 @@ def create_api_router(
             )
         return profile_with_session(User.model_validate(existing))
 
+    @router.post("/auth/register", response_model=AuthResponse, status_code=201)
+    def auth_register(payload: UserCreate) -> AuthResponse:
+        profile = register_user(payload)
+        return AuthResponse(
+            token=profile.session_token or "",
+            user=AuthUser(
+                id=profile.user_id,
+                name=profile.name,
+                email=profile.email,
+                location=profile.location,
+                specialty=profile.specialty,
+                joinedAt=profile.joined_at,
+            ),
+        )
+
+    @router.post("/auth/login", response_model=AuthResponse)
+    def auth_login(payload: UserLogin) -> AuthResponse:
+        profile = login_user(payload)
+        return AuthResponse(
+            token=profile.session_token or "",
+            user=AuthUser(
+                id=profile.user_id,
+                name=profile.name,
+                email=profile.email,
+                location=profile.location,
+                specialty=profile.specialty,
+                joinedAt=profile.joined_at,
+            ),
+        )
+
+    @router.post("/auth/logout")
+    def auth_logout(request: Request) -> dict[str, str]:
+        auth_hdr = request.headers.get("Authorization", "")
+        token = auth_hdr.removeprefix("Bearer ").strip() if auth_hdr.startswith("Bearer ") else ""
+        if token:
+            sessions.pop(token, None)
+        return {"status": "ok"}
+
+    @router.get("/auth/me", response_model=AuthUser)
+    def auth_me(request: Request) -> AuthUser:
+        auth_hdr = request.headers.get("Authorization", "")
+        token = auth_hdr.removeprefix("Bearer ").strip() if auth_hdr.startswith("Bearer ") else ""
+        session = sessions.get(token)
+        if not session or session[1] <= utc_now():
+            raise HTTPException(status_code=401, detail="Not authenticated")
+        user_id = session[0]
+        user_doc = repository.get_user(user_id)
+        if not user_doc:
+            raise not_found("User", user_id)
+        return AuthUser(
+            id=user_doc.get("user_id") or user_doc.get("id"),
+            name=user_doc.get("name", "Farmer"),
+            email=user_doc.get("email", ""),
+            location=user_doc.get("location"),
+            specialty=user_doc.get("specialty"),
+            joinedAt=user_doc.get("joined_at") or user_doc.get("joinedAt"),
+        )
+
     @router.get("/users", response_model=list[UserProfile])
     def list_users(request: Request) -> list[UserProfile]:
         session_user(request)
@@ -358,6 +427,13 @@ def create_api_router(
         repository.update_farm(farm_id, updates)
         return Farm.model_validate(owned_farm(farm_id, request))
 
+    @router.delete("/farms/{farm_id}", status_code=204)
+    def delete_farm(farm_id: str, request: Request) -> None:
+        owned_farm(farm_id, request)
+        deleted = repository.delete_farm(farm_id)
+        if not deleted:
+            raise not_found("Farm", farm_id)
+
     @router.post("/farms/{farm_id}/zones", response_model=Zone, status_code=201)
     def create_zone(farm_id: str, payload: ZoneInput, request: Request) -> Zone:
         owned_farm(farm_id, request)
@@ -375,6 +451,13 @@ def create_api_router(
         if not updated:
             raise not_found("Zone", zone_id)
         return Zone.model_validate(updated)
+
+    @router.delete("/farms/{farm_id}/zones/{zone_id}", status_code=204)
+    def delete_zone(farm_id: str, zone_id: str, request: Request) -> None:
+        owned_farm(farm_id, request)
+        deleted = repository.delete_zone(farm_id, zone_id)
+        if not deleted:
+            raise not_found("Zone", zone_id)
 
     @router.post("/scenarios", response_model=Scenario, status_code=201)
     async def create_scenario(payload: ScenarioCreate, request: Request) -> Scenario:
@@ -597,6 +680,72 @@ def create_api_router(
             payload.scenario_type or "CUSTOM",
             payload.duration_days or 30,
         )
+
+    @router.post("/ai/time-series-features")
+    def time_series_features_endpoint(payload: dict[str, Any]) -> dict[str, Any]:
+        try:
+            from app.schemas.prescriptive import TimeSeriesFeatureRequest
+            from app.services.time_series_features import extract_time_series_features
+            req = TimeSeriesFeatureRequest.model_validate(payload)
+            res = extract_time_series_features(req)
+            return res.model_dump(mode="json")
+        except Exception as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    @router.post("/ai/prescribe-intervention")
+    def prescribe_intervention_endpoint(payload: dict[str, Any]) -> dict[str, Any]:
+        try:
+            from app.schemas.prescriptive import PrescribeInterventionRequest
+            from app.services.prescriptive_optimizer import prescribe_intervention
+            req = PrescribeInterventionRequest.model_validate(payload)
+            res = prescribe_intervention(req)
+            return res.model_dump(mode="json")
+        except Exception as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    @router.post("/ai/analyze-temporal-risk")
+    def analyze_temporal_risk_endpoint(payload: dict[str, Any]) -> dict[str, Any]:
+        try:
+            from app.schemas.advanced_analytics import TemporalRiskRequest
+            from app.services.temporal_risk_fusion import fuse_temporal_risk
+            req = TemporalRiskRequest.model_validate(payload)
+            res = fuse_temporal_risk(req)
+            return res.model_dump(mode="json")
+        except Exception as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    @router.post("/ai/sensitivity-analysis")
+    def sensitivity_analysis_endpoint(payload: dict[str, Any]) -> dict[str, Any]:
+        try:
+            from app.schemas.advanced_analytics import SensitivityAnalysisRequest
+            from app.services.sensitivity_analyzer import analyze_sensitivity
+            req = SensitivityAnalysisRequest.model_validate(payload)
+            res = analyze_sensitivity(req)
+            return res.model_dump(mode="json")
+        except Exception as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    @router.post("/ai/analyze-simulation")
+    def analyze_simulation_endpoint(payload: dict[str, Any]) -> dict[str, Any]:
+        try:
+            from app.schemas.result import AnalyzeSimulationRequest
+            from app.services.result_analyzer import analyze_simulation
+            req = AnalyzeSimulationRequest.model_validate(payload)
+            res = analyze_simulation(req.simulation_result)
+            return res.model_dump(mode="json")
+        except Exception as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    @router.post("/ai/compare-simulations")
+    def compare_simulations_ai_endpoint(payload: dict[str, Any]) -> dict[str, Any]:
+        try:
+            from app.schemas.result import CompareSimulationsRequest
+            from app.services.result_analyzer import compare_simulations
+            req = CompareSimulationsRequest.model_validate(payload)
+            res = compare_simulations(req.simulations)
+            return res.model_dump(mode="json")
+        except Exception as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
 
     @router.post("/demo/farm", response_model=Farm, status_code=201)
     def seed_demo_farm() -> Farm:

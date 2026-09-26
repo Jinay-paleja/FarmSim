@@ -40,6 +40,9 @@ class Repository(ABC):
     def update_farm(self, farm_id: str, updates: dict[str, Any]) -> dict[str, Any] | None: ...
 
     @abstractmethod
+    def delete_farm(self, farm_id: str) -> bool: ...
+
+    @abstractmethod
     def create_zone(self, zone: dict[str, Any]) -> None: ...
 
     @abstractmethod
@@ -50,6 +53,9 @@ class Repository(ABC):
 
     @abstractmethod
     def update_zone(self, farm_id: str, zone_id: str, updates: dict[str, Any]) -> dict[str, Any] | None: ...
+
+    @abstractmethod
+    def delete_zone(self, farm_id: str, zone_id: str) -> bool: ...
 
     @abstractmethod
     def create_scenario(self, scenario: dict[str, Any]) -> None: ...
@@ -188,6 +194,14 @@ class SQLiteRepository(Repository):
             conn.execute("UPDATE farms SET data = ? WHERE id = ?", (self._encode(document), farm_id))
         return document
 
+    def delete_farm(self, farm_id: str) -> bool:
+        with self._lock, self._connect() as conn:
+            conn.execute("DELETE FROM scenarios WHERE farm_id = ?", (farm_id,))
+            conn.execute("DELETE FROM simulations WHERE farm_id = ?", (farm_id,))
+            conn.execute("DELETE FROM zones WHERE farm_id = ?", (farm_id,))
+            cur = conn.execute("DELETE FROM farms WHERE id = ?", (farm_id,))
+            return cur.rowcount > 0
+
     def create_zone(self, zone: dict[str, Any]) -> None:
         self._insert("zones", zone["zone_id"], zone, farm_id=zone["farm_id"])
 
@@ -206,6 +220,11 @@ class SQLiteRepository(Repository):
         with self._lock, self._connect() as conn:
             conn.execute("UPDATE zones SET data = ? WHERE id = ?", (self._encode(document), zone_id))
         return document
+
+    def delete_zone(self, farm_id: str, zone_id: str) -> bool:
+        with self._lock, self._connect() as conn:
+            cur = conn.execute("DELETE FROM zones WHERE id = ? AND farm_id = ?", (zone_id, farm_id))
+            return cur.rowcount > 0
 
     def create_scenario(self, scenario: dict[str, Any]) -> None:
         self._insert("scenarios", scenario["scenario_id"], scenario, farm_id=scenario["farm_id"])
@@ -266,6 +285,13 @@ class FirestoreRepository(Repository):
     def update_farm(self, farm_id: str, updates: dict[str, Any]) -> dict[str, Any] | None:
         return self._impl.update_farm(farm_id, updates)
 
+    def delete_farm(self, farm_id: str) -> bool:
+        try:
+            self._impl.delete_farm(farm_id)
+            return True
+        except Exception:
+            return False
+
     def create_zone(self, zone: dict[str, Any]) -> None:
         self._impl.create_zone(zone)
 
@@ -277,6 +303,13 @@ class FirestoreRepository(Repository):
 
     def update_zone(self, farm_id: str, zone_id: str, updates: dict[str, Any]) -> dict[str, Any] | None:
         return self._impl.update_zone(farm_id, zone_id, updates)
+
+    def delete_zone(self, farm_id: str, zone_id: str) -> bool:
+        try:
+            self._impl.delete_zone(farm_id, zone_id)
+            return True
+        except Exception:
+            return False
 
     def create_scenario(self, scenario: dict[str, Any]) -> None:
         self._impl.create_scenario(scenario)
@@ -299,6 +332,14 @@ class FirestoreRepository(Repository):
 
 def create_repository(database_url: str, firebase_service_account_path: str | None = None) -> Repository:
     from .config import settings
+    import logging
+    logger = logging.getLogger("farmsim.repository")
+
     if settings.storage_mode == "firebase" or database_url.startswith("firestore://"):
-        return FirestoreRepository(firebase_service_account_path)
+        try:
+            return FirestoreRepository(firebase_service_account_path)
+        except RepositoryError as exc:
+            logger.warning("Firestore repository unavailable (%s). Falling back to SQLite.", exc)
+            fallback_db = "sqlite:///farmsim.db" if database_url.startswith("firestore://") else database_url
+            return SQLiteRepository(fallback_db)
     return SQLiteRepository(database_url)
