@@ -4,7 +4,7 @@ import {
   Droplets, Thermometer, Heart, Bug, Zap, Wheat, MapPin,
   Plus, Play, Loader2, TrendingUp, Sprout, BarChart3,
   Layers, Compass, Edit3, ArrowUpRight, ShieldAlert,
-  Tractor, Check, X, Sparkles, Filter, ChevronRight,
+  Tractor, Check, X, Sparkles, Filter, ChevronRight, Trash2,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { farmApi, simulationApi } from '../services/api';
@@ -53,6 +53,7 @@ export default function FarmDashboardPage() {
     selectedZoneIndex,
     selectZoneIndex,
     updateFarmInState,
+    deleteFarm,
   } = useFarmContext();
 
   const [farm, setFarm] = useState<Farm | null>(null);
@@ -175,6 +176,49 @@ export default function FarmDashboardPage() {
     selectZoneIndex(idx);
     if (idx !== null && fieldCardsRef.current[idx]) {
       fieldCardsRef.current[idx]?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+  };
+
+  const handleDeleteFarm = async () => {
+    if (!farm) return;
+    if (!window.confirm(`Are you sure you want to delete "${farm.name}"? This will delete all its plots and simulation records.`)) {
+      return;
+    }
+    try {
+      await deleteFarm(farm.id);
+      toast.success(`Deleted farm "${farm.name}"`);
+      navigate('/');
+    } catch {
+      toast.error('Failed to delete farm');
+    }
+  };
+
+  const handleDeleteField = async (zoneIdx: number) => {
+    if (!farm) return;
+    const targetName = farm.zones[zoneIdx]?.name || `Field ${zoneIdx + 1}`;
+    if (!window.confirm(`Are you sure you want to delete ${targetName}?`)) {
+      return;
+    }
+    const updatedZones = farm.zones.filter((_, i) => i !== zoneIdx);
+    const updatedFarm = { ...farm, zones: updatedZones };
+    setFarm(updatedFarm);
+    updateFarmInState(updatedFarm);
+    selectZoneIndex(null);
+
+    try {
+      if (isMockEnabled()) {
+        const stored = JSON.parse(localStorage.getItem('farms') || '[]') as Farm[];
+        const idx = stored.findIndex((f) => f.id === farm.id);
+        if (idx !== -1) {
+          stored[idx] = updatedFarm;
+          localStorage.setItem('farms', JSON.stringify(stored));
+        }
+      } else {
+        await farmApi.update(farm.id, updatedFarm);
+      }
+      toast.success(`Deleted ${targetName}`);
+    } catch {
+      toast.error('Failed to delete field');
     }
   };
 
@@ -400,6 +444,15 @@ export default function FarmDashboardPage() {
               <Play className="w-4 h-4 fill-current" />
             )}
             {simulating ? 'Simulating...' : 'Run Simulation'}
+          </button>
+          <button
+            type="button"
+            onClick={handleDeleteFarm}
+            className="px-3 py-2 border border-red-200 text-red-600 hover:bg-red-50 rounded-xl text-xs sm:text-sm font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+            title="Delete this farm permanently"
+          >
+            <Trash2 className="w-4 h-4" />
+            <span>Delete Farm</span>
           </button>
         </div>
       </div>
@@ -742,7 +795,20 @@ export default function FarmDashboardPage() {
                       </p>
                     </div>
                   </div>
-                  <StatusBadge value={zone.healthScore ?? 75} />
+                  <div className="flex items-center gap-1.5">
+                    <StatusBadge value={zone.healthScore ?? 75} />
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteField(idx);
+                      }}
+                      className="p-1 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                      title={`Delete ${zone.name}`}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
 
                 <div className="space-y-2 text-sm">

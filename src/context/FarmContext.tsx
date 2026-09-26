@@ -16,6 +16,7 @@ interface FarmContextType {
   selectZoneIndex: (index: number | null) => void;
   refreshFarms: () => Promise<void>;
   updateFarmInState: (updated: Farm) => void;
+  deleteFarm: (farmId: string) => Promise<void>;
 }
 
 const FarmContext = createContext<FarmContextType | undefined>(undefined);
@@ -129,6 +130,32 @@ export function FarmProvider({ children }: { children: React.ReactNode }) {
     }
   }, [user]);
 
+  const deleteFarm = useCallback(async (farmId: string) => {
+    try {
+      await farmApi.delete(farmId);
+    } catch {
+      // Fallback
+    }
+
+    setAllFarms((prev) => prev.filter((f) => f.id !== farmId));
+
+    if (isMockEnabled()) {
+      try {
+        const stored = JSON.parse(localStorage.getItem('farms') || '[]') as Farm[];
+        const filtered = stored.filter((f) => f.id !== farmId);
+        localStorage.setItem('farms', JSON.stringify(filtered));
+        localStorage.setItem('farms_initialized', 'true');
+      } catch {
+        // ignore
+      }
+    }
+
+    if (selectedFarmId === farmId) {
+      setSelectedFarmId(null);
+      setSelectedZoneIndex(null);
+    }
+  }, [selectedFarmId]);
+
   return (
     <FarmContext.Provider
       value={{
@@ -143,6 +170,7 @@ export function FarmProvider({ children }: { children: React.ReactNode }) {
         selectZoneIndex,
         refreshFarms: loadFarms,
         updateFarmInState,
+        deleteFarm,
       }}
     >
       {children}

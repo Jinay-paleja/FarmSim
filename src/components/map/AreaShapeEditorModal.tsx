@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import {
   X, Maximize2, Move, Ruler, Square, Edit3, Compass,
   Layers, Check, Sparkles, ArrowRight, RefreshCw,
-  ChevronDown, ArrowUp, ArrowDown, ArrowLeft,
+  ChevronDown, ArrowUp, ArrowDown, ArrowLeft, Trash2,
 } from 'lucide-react';
 import type { ZoneInput } from '../../types';
 import {
@@ -38,6 +38,8 @@ interface AreaShapeEditorModalProps {
   onToggleMoveMode: () => void;
   isResizeMode?: boolean;
   onToggleResizeMode?: () => void;
+  onDeleteZone?: (zoneIndex: number) => void;
+  onDeleteFarm?: () => void;
 }
 
 export default function AreaShapeEditorModal({
@@ -58,6 +60,8 @@ export default function AreaShapeEditorModal({
   onToggleMoveMode,
   isResizeMode = false,
   onToggleResizeMode = () => {},
+  onDeleteZone,
+  onDeleteFarm,
 }: AreaShapeEditorModalProps) {
   if (!isOpen) return null;
 
@@ -105,7 +109,7 @@ export default function AreaShapeEditorModal({
     if (sizeUnit === 'sqMeters') return areaMeas.squareMeters || 40468;
     return areaMeas.acres || 10;
   });
-  const [scaleChildPlots, setScaleChildPlots] = useState<boolean>(true);
+  const [scaleChildPlots, setScaleChildPlots] = useState<boolean>(false);
 
   // Rectangle dimension editing state
   const [rectWidth, setRectWidth] = useState<number>(dims.widthMeters || 200);
@@ -172,7 +176,7 @@ export default function AreaShapeEditorModal({
         toast.success(`Scaled farm and ${zones.length} field plots to ${targetAcres.toFixed(1)} acres!`);
       } else {
         onUpdateFarmBoundary(scaledBoundary, 'polygon');
-        toast.success(`Scaled farm to ${targetAcres.toFixed(1)} acres!`);
+        toast.success(`Scaled farm to ${targetAcres.toFixed(1)} acres! (Plot sizes unchanged)`);
       }
     } else {
       onUpdateZoneBoundary(activeTargetIndex, scaledBoundary);
@@ -306,6 +310,44 @@ export default function AreaShapeEditorModal({
               </button>
             );
           })}
+
+          {/* Delete Action button for the currently selected target */}
+          <div className="ml-auto flex items-center flex-shrink-0 pr-1">
+            {!isFarmSelected && onDeleteZone && activeTargetIndex !== null && (
+              <button
+                type="button"
+                onClick={() => {
+                  const targetName = zones[activeTargetIndex]?.name || `Field ${activeTargetIndex + 1}`;
+                  if (window.confirm(`Are you sure you want to delete ${targetName}?`)) {
+                    onDeleteZone(activeTargetIndex);
+                    onSelectZone(null);
+                  }
+                }}
+                className="px-2.5 py-1.5 rounded-xl border border-red-200 bg-red-50 hover:bg-red-100 text-red-600 text-xs font-bold flex items-center gap-1 transition-all cursor-pointer"
+                title="Delete this field plot"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>Delete Field</span>
+              </button>
+            )}
+
+            {isFarmSelected && onDeleteFarm && (
+              <button
+                type="button"
+                onClick={() => {
+                  if (window.confirm(`Are you sure you want to delete the entire farm "${farmName}"? This action cannot be undone.`)) {
+                    onDeleteFarm();
+                    onClose();
+                  }
+                }}
+                className="px-2.5 py-1.5 rounded-xl border border-red-200 bg-red-50 hover:bg-red-100 text-red-600 text-xs font-bold flex items-center gap-1 transition-all cursor-pointer"
+                title="Delete this farm"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>Delete Farm</span>
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Live Measurement Summary Banner */}

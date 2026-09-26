@@ -225,6 +225,8 @@ export function ensureDefaultFarms(): Farm[] {
     },
   ];
 
+  const isInitialized = localStorage.getItem('farms_initialized') === 'true';
+
   // Backfill ownerId for existing stored farms if missing
   let updatedStored = false;
   const backfilled = stored.map((f) => {
@@ -238,12 +240,9 @@ export function ensureDefaultFarms(): Farm[] {
     return f;
   });
 
-  if (backfilled.length < 3) {
+  // Only seed default farms on the very first initial run
+  if (!isInitialized && backfilled.length === 0) {
     const seededFarms = defaultSpecs.map((spec) => {
-      const existing = backfilled.find((f) => f.id === spec.id || f.name === spec.name);
-      if (existing) {
-        return { ...existing, ownerId: existing.ownerId || spec.ownerId };
-      }
       const created = createMockFarm({
         name: spec.name,
         location: spec.location,
@@ -258,12 +257,14 @@ export function ensureDefaultFarms(): Farm[] {
       return created;
     });
 
-    const merged = [
-      ...seededFarms,
-      ...backfilled.filter((f) => !seededFarms.some((sf) => sf.id === f.id)),
-    ];
-    localStorage.setItem('farms', JSON.stringify(merged));
-    return merged;
+    localStorage.setItem('farms', JSON.stringify(seededFarms));
+    localStorage.setItem('farms_initialized', 'true');
+    return seededFarms;
+  }
+
+  // Mark initialized so deletions persist
+  if (!isInitialized) {
+    localStorage.setItem('farms_initialized', 'true');
   }
 
   if (updatedStored) {
@@ -272,4 +273,19 @@ export function ensureDefaultFarms(): Farm[] {
 
   return backfilled;
 }
+
+/**
+ * Permanently deletes a farm and its associated data from storage.
+ */
+export function deleteMockFarm(farmId: string): void {
+  try {
+    const stored = JSON.parse(localStorage.getItem('farms') || '[]') as Farm[];
+    const filtered = stored.filter((f) => f.id !== farmId);
+    localStorage.setItem('farms', JSON.stringify(filtered));
+    localStorage.setItem('farms_initialized', 'true');
+  } catch {
+    // ignore
+  }
+}
+
 

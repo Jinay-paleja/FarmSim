@@ -71,7 +71,7 @@ function getInitialCoordinates(farm: Farm): [number, number] {
 export default function FarmBuilderPage() {
   const { farmId } = useParams<{ farmId: string }>();
   const navigate = useNavigate();
-  const { updateFarmInState, selectFarm } = useFarmContext();
+  const { updateFarmInState, selectFarm, deleteFarm } = useFarmContext();
 
   const [farm, setFarm] = useState<Farm | null>(null);
   const [zones, setZones] = useState<ZoneInput[]>([]);
@@ -420,14 +420,28 @@ export default function FarmBuilderPage() {
 
   // Handler: delete field
   const handleDeleteZone = (index: number) => {
-    if (zones.length <= 1) {
-      toast.error('At least 1 field area is required');
+    const targetName = zones[index]?.name || `Field ${index + 1}`;
+    if (!window.confirm(`Are you sure you want to delete ${targetName}?`)) {
       return;
     }
-    const deletedName = zones[index]?.name;
     setZones((prev) => prev.filter((_, i) => i !== index));
     setSelectedZoneIndex(null);
-    toast.success(`Deleted ${deletedName}`);
+    toast.success(`Deleted ${targetName}`);
+  };
+
+  // Handler: delete entire farm
+  const handleDeleteFarm = async () => {
+    if (!farm) return;
+    if (!window.confirm(`Are you sure you want to delete "${farm.name}"? This action cannot be undone.`)) {
+      return;
+    }
+    try {
+      await deleteFarm(farm.id);
+      toast.success(`Deleted farm "${farm.name}"`);
+      navigate('/');
+    } catch {
+      toast.error('Failed to delete farm');
+    }
   };
 
   // Handler: Save
@@ -790,6 +804,17 @@ export default function FarmBuilderPage() {
               {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
               {saving ? 'Saving...' : 'Save & Continue'}
             </button>
+
+            {/* Delete Farm Button */}
+            <button
+              type="button"
+              onClick={handleDeleteFarm}
+              className="px-3 py-2 rounded-xl border border-red-200 text-red-600 hover:bg-red-50 text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer shadow-xs"
+              title="Delete this farm permanently"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              <span>Delete Farm</span>
+            </button>
           </div>
         </div>
 
@@ -968,6 +993,17 @@ export default function FarmBuilderPage() {
                           <span className="text-xs px-2 py-0.5 rounded-full font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
                             {Math.round(z.healthScore ?? 80)}% Health
                           </span>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteZone(idx);
+                            }}
+                            className="p-1 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                            title={`Delete ${z.name}`}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
                           <ChevronRight className="w-4 h-4 text-gray-400 group-hover:text-farm-green transition-colors" />
                         </div>
                       </div>
@@ -1040,6 +1076,8 @@ export default function FarmBuilderPage() {
         onToggleMoveMode={() => setIsMoveMode(!isMoveMode)}
         isResizeMode={isResizeMode}
         onToggleResizeMode={() => setIsResizeMode(!isResizeMode)}
+        onDeleteZone={handleDeleteZone}
+        onDeleteFarm={handleDeleteFarm}
       />
     </div>
   );

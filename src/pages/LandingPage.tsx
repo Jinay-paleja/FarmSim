@@ -2,15 +2,16 @@ import { Link, useNavigate } from 'react-router-dom';
 import {
   Sprout, ArrowRight, Cloud, Droplets, Sun, BarChart3,
   Wheat, Leaf, LineChart, FlaskConical, Zap, ShieldCheck,
-  Compass, MapPin, Layers, User as UserIcon, LogIn, Sparkles
+  Compass, MapPin, Layers, User as UserIcon, LogIn, Sparkles, Trash2,
 } from 'lucide-react';
+import toast from 'react-hot-toast';
 import { useFarmContext } from '../context/FarmContext';
 import { useAuth, DEMO_FARMERS } from '../context/AuthContext';
 
 export default function LandingPage() {
   const navigate = useNavigate();
   const { user, farmerProfile, demoLogin, availableDemoFarmers } = useAuth();
-  const { farms, loadingFarms, selectFarm, allFarms } = useFarmContext();
+  const { farms, loadingFarms, selectFarm, allFarms, deleteFarm } = useFarmContext();
 
   const features = [
     {
@@ -238,9 +239,25 @@ export default function LandingPage() {
                       <div className="w-12 h-12 rounded-2xl bg-farm-green-pale flex items-center justify-center text-xl shadow-xs group-hover:scale-105 transition-transform">
                         🌾
                       </div>
-                      <span className="text-xs font-bold text-farm-green bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-full flex items-center gap-1 group-hover:bg-farm-green group-hover:text-white transition-colors">
-                        Select Farm <ArrowRight className="w-3 h-3" />
-                      </span>
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (window.confirm(`Are you sure you want to delete "${farm.name}"?`)) {
+                              deleteFarm(farm.id);
+                              toast.success(`Deleted ${farm.name}`);
+                            }
+                          }}
+                          className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
+                          title={`Delete ${farm.name}`}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                        <span className="text-xs font-bold text-farm-green bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-full flex items-center gap-1 group-hover:bg-farm-green group-hover:text-white transition-colors">
+                          Select Farm <ArrowRight className="w-3 h-3" />
+                        </span>
+                      </div>
                     </div>
 
                     <h3 className="font-bold text-lg text-gray-900 group-hover:text-farm-green transition-colors">

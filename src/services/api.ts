@@ -10,6 +10,7 @@ import type {
   ComparisonRequest,
   ComparisonResult,
 } from '../types';
+import { deleteMockFarm } from './mockData';
 
 // ============================================================
 // API Client Configuration
@@ -81,7 +82,12 @@ export const farmApi = {
   },
 
   delete: async (farmId: string): Promise<void> => {
-    await apiClient.delete(`/farms/${farmId}`);
+    try {
+      await apiClient.delete(`/farms/${farmId}`);
+    } catch {
+      // Fallback in mock mode
+    }
+    deleteMockFarm(farmId);
   },
 };
 
