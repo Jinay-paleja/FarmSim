@@ -601,3 +601,43 @@ export function scalePolygonToArea(
     return [newLat, newLng];
   });
 }
+
+/**
+ * Scales an existing polygon around its centroid by a raw scale factor.
+ */
+export function scalePolygonByFactor(
+  polygon: [number, number][],
+  scaleFactor: number
+): [number, number][] {
+  if (!polygon || polygon.length < 3 || scaleFactor <= 0) return polygon;
+  const [cLat, cLng] = getPolygonCenter(polygon);
+  return polygon.map(([lat, lng]) => [
+    cLat + (lat - cLat) * scaleFactor,
+    cLng + (lng - cLng) * scaleFactor,
+  ]);
+}
+
+/**
+ * Filters a stream of coordinates to maintain minimum spacing (in meters) for clean freehand drawing.
+ */
+export function simplifyCoordinates(
+  coords: [number, number][],
+  minDistanceMeters: number = 6
+): [number, number][] {
+  if (!coords || coords.length <= 2) return coords;
+  const filtered: [number, number][] = [coords[0]];
+  for (let i = 1; i < coords.length; i++) {
+    const prev = filtered[filtered.length - 1];
+    const curr = coords[i];
+    if (haversineDistance(prev, curr) >= minDistanceMeters) {
+      filtered.push(curr);
+    }
+  }
+  // Always include the last point if it's not identical to the one before
+  const last = coords[coords.length - 1];
+  if (filtered.length > 0 && haversineDistance(filtered[filtered.length - 1], last) > 1) {
+    filtered.push(last);
+  }
+  return filtered;
+}
+

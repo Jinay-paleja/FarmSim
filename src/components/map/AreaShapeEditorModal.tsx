@@ -31,11 +31,13 @@ interface AreaShapeEditorModalProps {
   onUpdateFarmBoundary: (coords: [number, number][], shape: 'polygon' | 'rectangle' | 'circle') => void;
   onUpdateZoneBoundary: (zoneIndex: number, coords: [number, number][]) => void;
   onUpdateFarmAndZones: (newFarmBoundary: [number, number][], updatedZones: ZoneInput[]) => void;
-  onStartDrawingTool: (tool: 'polygon' | 'rectangle', target: 'farm_boundary' | 'field') => void;
+  onStartDrawingTool: (tool: 'polygon' | 'freehand' | 'rectangle', target: 'farm_boundary' | 'field') => void;
   isEditingVertices: boolean;
   onToggleVertexEditing: () => void;
   isMoveMode: boolean;
   onToggleMoveMode: () => void;
+  isResizeMode?: boolean;
+  onToggleResizeMode?: () => void;
 }
 
 export default function AreaShapeEditorModal({
@@ -54,6 +56,8 @@ export default function AreaShapeEditorModal({
   onToggleVertexEditing,
   isMoveMode,
   onToggleMoveMode,
+  isResizeMode = false,
+  onToggleResizeMode = () => {},
 }: AreaShapeEditorModalProps) {
   if (!isOpen) return null;
 
@@ -579,19 +583,44 @@ export default function AreaShapeEditorModal({
                   Sketch Freeform Shape or Drag Vertices
                 </h3>
                 <p className="text-xs text-gray-500 mt-1">
-                  You can either redraw the area point-by-point on the map, or turn on corner pin handles to drag individual vertices into position.
+                  Sketch any custom shape or organic polygon using your mouse, drag corner pins, or insert new corner points along any edge.
                 </p>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* 1. Freehand Mouse Sketch */}
+                <div className="p-4 rounded-2xl border border-emerald-200 bg-emerald-50/60 space-y-3 flex flex-col justify-between">
+                  <div>
+                    <div className="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center mb-2 shadow-xs">
+                      <Edit3 className="w-5 h-5" />
+                    </div>
+                    <div className="font-bold text-xs text-emerald-950">✏️ Freehand Mouse Sketch</div>
+                    <div className="text-[11px] text-emerald-800 mt-1">
+                      Hold down left mouse button and draw any organic terrain boundary (curved contours, non-rectangles).
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onStartDrawingTool('freehand', isFarmSelected ? 'farm_boundary' : 'field');
+                      onClose();
+                      toast('Hold left click on map and sketch the shape outline with your mouse', { icon: '✏️' });
+                    }}
+                    className="w-full py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition-colors cursor-pointer shadow-xs"
+                  >
+                    Start Freehand Sketch
+                  </button>
+                </div>
+
+                {/* 2. Point-by-Point Polygon */}
                 <div className="p-4 rounded-2xl border border-gray-200 bg-stone-50 space-y-3 flex flex-col justify-between">
                   <div>
                     <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center mb-2">
                       <Edit3 className="w-5 h-5" />
                     </div>
-                    <div className="font-bold text-xs text-gray-900">Redraw / Sketch on Map</div>
+                    <div className="font-bold text-xs text-gray-900">Point-by-Point Polygon</div>
                     <div className="text-[11px] text-gray-500 mt-1">
-                      Click consecutive points on the satellite map to trace the precise boundary line.
+                      Click consecutive points on the satellite map to trace any custom multi-sided polygon.
                     </div>
                   </div>
                   <button
@@ -599,29 +628,30 @@ export default function AreaShapeEditorModal({
                     onClick={() => {
                       onStartDrawingTool('polygon', isFarmSelected ? 'farm_boundary' : 'field');
                       onClose();
-                      toast('Click on map to place polygon points. Click start to finish.', { icon: '✏️' });
+                      toast('Click on map to place polygon points. Click start to finish.', { icon: '📐' });
                     }}
                     className="w-full py-2.5 px-3 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs transition-colors cursor-pointer"
                   >
-                    Start Sketching
+                    Start Point-by-Point
                   </button>
                 </div>
 
+                {/* 3. Corner Pins & Edge Midpoint Handles */}
                 <div className="p-4 rounded-2xl border border-gray-200 bg-stone-50 space-y-3 flex flex-col justify-between">
                   <div>
                     <div className="w-10 h-10 rounded-xl bg-blue-100 text-blue-800 flex items-center justify-center mb-2">
                       <Maximize2 className="w-5 h-5" />
                     </div>
-                    <div className="font-bold text-xs text-gray-900">Draggable Corner Pins</div>
+                    <div className="font-bold text-xs text-gray-900">Draggable Pins &amp; Edge Handles</div>
                     <div className="text-[11px] text-gray-500 mt-1">
-                      Shows round pin handles at every corner vertex. Drag any pin to stretch the shape.
+                      Shows round corner pins + blue &quot;+&quot; edge handles. Drag any edge to insert new corners and reshape contours.
                     </div>
                   </div>
                   <button
                     type="button"
                     onClick={() => {
                       onToggleVertexEditing();
-                      toast.success(isEditingVertices ? 'Vertex handles hidden' : 'Vertex handles active on map!');
+                      toast.success(isEditingVertices ? 'Vertex handles hidden' : 'Vertex handles & edge pins active on map!');
                     }}
                     className={`w-full py-2.5 px-3 rounded-xl font-bold text-xs transition-colors cursor-pointer ${
                       isEditingVertices
@@ -629,7 +659,34 @@ export default function AreaShapeEditorModal({
                         : 'bg-white border border-gray-300 text-gray-800 hover:bg-gray-100'
                     }`}
                   >
-                    {isEditingVertices ? '✓ Vertex Pins Active' : 'Enable Vertex Pins'}
+                    {isEditingVertices ? '✓ Vertex & Edge Pins Active' : 'Enable Vertex & Edge Pins'}
+                  </button>
+                </div>
+
+                {/* 4. Direct Mouse Scale Resize Handle */}
+                <div className="p-4 rounded-2xl border border-amber-200 bg-amber-50/50 space-y-3 flex flex-col justify-between">
+                  <div>
+                    <div className="w-10 h-10 rounded-xl bg-amber-600 text-white flex items-center justify-center mb-2">
+                      <span className="text-base font-bold">↔</span>
+                    </div>
+                    <div className="font-bold text-xs text-amber-950">Direct Mouse Scale Handle</div>
+                    <div className="text-[11px] text-amber-800 mt-1">
+                      Shows an amber ↔ handle on map. Drag outward to expand area or inward to shrink area with your mouse.
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onToggleResizeMode?.();
+                      toast.success(isResizeMode ? 'Scale handle hidden' : 'Scale handle active! Drag ↔ pin to resize.');
+                    }}
+                    className={`w-full py-2.5 px-3 rounded-xl font-bold text-xs transition-colors cursor-pointer ${
+                      isResizeMode
+                        ? 'bg-amber-600 text-white shadow-xs'
+                        : 'bg-white border border-amber-300 text-amber-900 hover:bg-amber-100'
+                    }`}
+                  >
+                    {isResizeMode ? '✓ Scale Handle Active' : 'Enable Mouse Scale Handle'}
                   </button>
                 </div>
               </div>

@@ -86,6 +86,7 @@ export default function FarmBuilderPage() {
   const [viewMode, setViewMode] = useState<FieldViewMode>('health');
   const [isEditingVertices, setIsEditingVertices] = useState(false);
   const [isMoveMode, setIsMoveMode] = useState(false);
+  const [isResizeMode, setIsResizeMode] = useState(false);
   const [isAreaShapeModalOpen, setIsAreaShapeModalOpen] = useState(false);
   const [validationWarning, setValidationWarning] = useState<string | null>(null);
   const [sidebarTab, setSidebarTab] = useState<'plots' | 'intelligence'>('plots');
@@ -560,14 +561,29 @@ export default function FarmBuilderPage() {
                   setDrawingTarget('farm_boundary');
                   setDrawingTool(drawingTool === 'polygon' && drawingTarget === 'farm_boundary' ? 'none' : 'polygon');
                 }}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all ${
+                className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all ${
                   drawingTool === 'polygon' && drawingTarget === 'farm_boundary'
                     ? 'bg-amber-600 text-white shadow-sm'
                     : 'text-amber-900 hover:bg-amber-100'
                 }`}
-                title="Draw farm outer boundary polygon"
+                title="Click point-by-point to draw farm outer boundary"
               >
-                🚜 Draw Boundary
+                🚜 Polygon
+              </button>
+              <button
+                onClick={() => {
+                  setDrawingTarget('farm_boundary');
+                  setDrawingTool(drawingTool === 'freehand' && drawingTarget === 'farm_boundary' ? 'none' : 'freehand');
+                  toast('Hold left click and sketch farm boundary directly with your mouse', { icon: '✏️' });
+                }}
+                className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 transition-all ${
+                  drawingTool === 'freehand' && drawingTarget === 'farm_boundary'
+                    ? 'bg-amber-600 text-white shadow-sm'
+                    : 'text-amber-900 hover:bg-amber-100'
+                }`}
+                title="Hold mouse down and sketch any organic boundary"
+              >
+                ✏️ Sketch
               </button>
             </div>
 
@@ -578,14 +594,29 @@ export default function FarmBuilderPage() {
                   setDrawingTarget('field');
                   setDrawingTool(drawingTool === 'polygon' && drawingTarget === 'field' ? 'none' : 'polygon');
                 }}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all ${
+                className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all ${
                   drawingTool === 'polygon' && drawingTarget === 'field'
                     ? 'bg-emerald-600 text-white shadow-sm'
                     : 'text-emerald-900 hover:bg-emerald-100'
                 }`}
-                title="Draw custom polygon field"
+                title="Click point-by-point to draw polygon field"
               >
-                <Plus className="w-3.5 h-3.5" /> Add Field
+                <Plus className="w-3.5 h-3.5" /> Polygon
+              </button>
+              <button
+                onClick={() => {
+                  setDrawingTarget('field');
+                  setDrawingTool(drawingTool === 'freehand' && drawingTarget === 'field' ? 'none' : 'freehand');
+                  toast('Hold left click and sketch field outline directly with your mouse', { icon: '✏️' });
+                }}
+                className={`px-2 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                  drawingTool === 'freehand' && drawingTarget === 'field'
+                    ? 'bg-emerald-600 text-white shadow-sm'
+                    : 'text-emerald-800 hover:bg-emerald-100'
+                }`}
+                title="Hold mouse down and sketch any organic field shape"
+              >
+                ✏️ Sketch
               </button>
               <button
                 onClick={() => {
@@ -625,10 +656,28 @@ export default function FarmBuilderPage() {
                   ? 'bg-blue-600 text-white border-blue-700 shadow-sm'
                   : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'
               }`}
-              title="Drag and edit polygon corner points"
+              title="Drag corner pins or drag '+' edge handles to reshape"
             >
               <Edit3 className="w-3.5 h-3.5" />
-              {isEditingVertices ? 'Finish Editing' : 'Edit Vertices'}
+              {isEditingVertices ? 'Finish Pins' : 'Edit Pins & Edges'}
+            </button>
+
+            {/* Direct Mouse Scale Resize Pin Toggle */}
+            <button
+              onClick={() => {
+                const next = !isResizeMode;
+                setIsResizeMode(next);
+                toast(next ? 'Scale Resize Active: Drag ↔ amber pin on map outward to increase, inward to decrease size' : 'Resize mode disabled', { icon: '↔' });
+              }}
+              className={`px-3 py-1.5 rounded-xl border text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                isResizeMode
+                  ? 'bg-amber-600 text-white border-amber-700 shadow-xs'
+                  : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'
+              }`}
+              title="Drag the amber ↔ scale handle to directly increase or decrease size with your mouse"
+            >
+              <Maximize2 className="w-3.5 h-3.5" />
+              <span>{isResizeMode ? 'Resizing Active' : '↔ Mouse Resize'}</span>
             </button>
 
             {/* Size, Shape & Dimensions Modal Button */}
@@ -777,6 +826,7 @@ export default function FarmBuilderPage() {
             viewMode={viewMode}
             isEditingVertices={isEditingVertices}
             isMoveMode={isMoveMode}
+            isResizeMode={isResizeMode}
             liveWeather={weather}
             onSelectZone={(idx) => setSelectedZoneIndex(idx)}
             onUpdateFarmBoundary={handleUpdateFarmBoundary}
@@ -988,6 +1038,8 @@ export default function FarmBuilderPage() {
         onToggleVertexEditing={() => setIsEditingVertices(!isEditingVertices)}
         isMoveMode={isMoveMode}
         onToggleMoveMode={() => setIsMoveMode(!isMoveMode)}
+        isResizeMode={isResizeMode}
+        onToggleResizeMode={() => setIsResizeMode(!isResizeMode)}
       />
     </div>
   );

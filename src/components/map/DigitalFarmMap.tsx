@@ -43,6 +43,9 @@ import {
   generateCirclePolygon,
   getPolygonCenter,
   getPolygonBounds,
+  haversineDistance,
+  scalePolygonByFactor,
+  simplifyCoordinates,
 } from '../../services/mapGeometry';
 
 // Leaflet default marker icon setup for Vite
@@ -69,7 +72,23 @@ const movePinIcon = L.divIcon({
   iconAnchor: [14, 14],
 });
 
-export type DrawingTool = 'none' | 'polygon' | 'rectangle' | 'circle';
+// Custom resize scale pin icon for interactive mouse drag resizing
+const resizePinIcon = L.divIcon({
+  className: 'custom-resize-pin',
+  html: `<div style="width: 28px; height: 28px; background: #d97706; color: #ffffff; border: 2.5px solid #ffffff; border-radius: 50%; box-shadow: 0 3px 8px rgba(0,0,0,0.45); display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: bold; cursor: nwse-resize;" title="Drag outward or inward to expand or shrink area">↔</div>`,
+  iconSize: [28, 28],
+  iconAnchor: [14, 14],
+});
+
+// Custom midpoint pin icon to add corner points on edges
+const midpointPinIcon = L.divIcon({
+  className: 'custom-midpoint-pin',
+  html: `<div style="width: 16px; height: 16px; background: #3b82f6; color: #ffffff; border: 2px solid #ffffff; border-radius: 50%; box-shadow: 0 2px 5px rgba(0,0,0,0.35); display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: bold; cursor: pointer; line-height: 1;" title="Drag to add corner point and reshape edge">+</div>`,
+  iconSize: [16, 16],
+  iconAnchor: [8, 8],
+});
+
+export type DrawingTool = 'none' | 'polygon' | 'freehand' | 'rectangle' | 'circle';
 export type DrawingTarget = 'farm_boundary' | 'field';
 export type BaseMapLayer = 'satellite' | 'streets' | 'topo';
 export type FieldViewMode = 'health' | 'crops' | 'moisture';
@@ -87,6 +106,7 @@ export interface DigitalFarmMapProps {
   viewMode?: FieldViewMode;
   isEditingVertices?: boolean;
   isMoveMode?: boolean;
+  isResizeMode?: boolean;
   onSelectZone?: (index: number | null) => void;
   onUpdateFarmBoundary?: (coords: [number, number][], shape: 'polygon' | 'rectangle' | 'circle') => void;
   onAddFieldWithGeometry?: (coords: [number, number][], shape: 'polygon' | 'rectangle' | 'circle') => void;
@@ -156,10 +176,12 @@ function MapDrawingController({
   onCancel: () => void;
   onValidationWarning: (warning: string | null) => void;
 }) {
+  const map = useMap();
   const [points, setPoints] = useState<[number, number][]>([]);
   const [cursorPos, setCursorPos] = useState<[number, number] | null>(null);
   const [circleCenter, setCircleCenter] = useState<[number, number] | null>(null);
   const [rectCorner1, setRectCorner1] = useState<[number, number] | null>(null);
+  const isMouseDownRef = useRef(false);
 
   // Clear drawing state when tool changes
   useEffect(() => {
@@ -167,17 +189,54 @@ function MapDrawingController({
     setCursorPos(null);
     setCircleCenter(null);
     setRectCorner1(null);
+    isMouseDownRef.current = false;
+    map.dragging.enable();
     onValidationWarning(null);
-  }, [drawingTool, drawingTarget]);
+  }, [drawingTool, drawingTarget, map]);
 
   useMapEvents({
+    mousedown(e) {
+      if (drawingTool === 'freehand') {
+        map.dragging.disable();
+        isMouseDownRef.current = true;
+        const startPt: [number, number] = [e.latlng.lat, e.latlng.lng];
+        setPoints([startPt]);
+      }
+    },
     mousemove(e) {
       if (drawingTool !== 'none') {
-        setCursorPos([e.latlng.lat, e.latlng.lng]);
+        const currentPt: [number, number] = [e.latlng.lat, e.latlng.lng];
+        setCursorPos(currentPt);
+
+        if (drawingTool === 'freehand' && isMouseDownRef.current) {
+          setPoints((prev) => {
+            if (prev.length === 0) return [currentPt];
+            const last = prev[prev.length - 1];
+            if (haversineDistance(last, currentPt) >= 5) {
+              return [...prev, currentPt];
+            }
+            return prev;
+          });
+        }
+      }
+    },
+    mouseup(e) {
+      if (drawingTool === 'freehand' && isMouseDownRef.current) {
+        isMouseDownRef.current = false;
+        map.dragging.enable();
+        const endPt: [number, number] = [e.latlng.lat, e.latlng.lng];
+        const allPoints = [...points, endPt];
+        const cleaned = simplifyCoordinates(allPoints, 6);
+        if (cleaned.length >= 3) {
+          validateAndFinish(cleaned, 'polygon');
+        } else {
+          onValidationWarning('Freehand sketch too small. Click & drag a wider loop.');
+          setPoints([]);
+        }
       }
     },
     click(e) {
-      if (drawingTool === 'none') return;
+      if (drawingTool === 'none' || drawingTool === 'freehand') return;
       const clickedPt: [number, number] = [e.latlng.lat, e.latlng.lng];
 
       if (drawingTool === 'polygon') {
@@ -250,6 +309,9 @@ function MapDrawingController({
 
   // Preview coordinates calculation
   const previewCoords: [number, number][] = useMemo(() => {
+    if (drawingTool === 'freehand') {
+      return points;
+    }
     if (drawingTool === 'polygon') {
       if (points.length > 0 && cursorPos) {
         return [...points, cursorPos];
@@ -276,8 +338,8 @@ function MapDrawingController({
           positions={previewCoords}
           pathOptions={{
             color: drawingTarget === 'farm_boundary' ? '#eab308' : '#22c55e',
-            dashArray: '5 5',
-            weight: 2,
+            dashArray: drawingTool === 'freehand' ? undefined : '5 5',
+            weight: drawingTool === 'freehand' ? 3 : 2,
           }}
         />
       )}
@@ -295,33 +357,38 @@ function MapDrawingController({
         />
       )}
 
-      {/* Placed vertex pins */}
-      {points.map((pt, idx) => (
-        <Marker
-          key={idx}
-          position={pt}
-          icon={vertexIcon}
-          eventHandlers={{
-            click: (e) => {
-              if (idx === 0 && points.length >= 3) {
-                L.DomEvent.stopPropagation(e);
-                validateAndFinish(points, 'polygon');
-              }
-            },
-          }}
-        >
-          {idx === 0 && points.length >= 3 && (
-            <Tooltip permanent direction="top" offset={[0, -10]}>
-              <span className="text-[11px] font-bold text-emerald-800">Click to close shape</span>
-            </Tooltip>
-          )}
-        </Marker>
-      ))}
+      {/* Placed vertex pins for polygon tool */}
+      {drawingTool === 'polygon' &&
+        points.map((pt, idx) => (
+          <Marker
+            key={idx}
+            position={pt}
+            icon={vertexIcon}
+            eventHandlers={{
+              click: (e) => {
+                if (idx === 0 && points.length >= 3) {
+                  L.DomEvent.stopPropagation(e);
+                  validateAndFinish(points, 'polygon');
+                }
+              },
+            }}
+          >
+            {idx === 0 && points.length >= 3 && (
+              <Tooltip permanent direction="top" offset={[0, -10]}>
+                <span className="text-[11px] font-bold text-emerald-800">Click to close shape</span>
+              </Tooltip>
+            )}
+          </Marker>
+        ))}
 
       {/* Floating Drawing Helper Pill */}
       <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[900] bg-gray-900/95 text-white px-4 py-2 rounded-full shadow-2xl flex items-center gap-3 text-xs border border-white/20 backdrop-blur-md">
         <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
         <span>
+          {drawingTool === 'freehand' &&
+            (points.length === 0
+              ? 'Hold left click and sketch any organic boundary'
+              : `Tracing contour (${points.length} pts)... release mouse to finish`)}
           {drawingTool === 'polygon' &&
             (points.length === 0
               ? 'Click to start boundary'
@@ -336,7 +403,7 @@ function MapDrawingController({
         {points.length >= 3 && (
           <button
             type="button"
-            onClick={() => validateAndFinish(points, 'polygon')}
+            onClick={() => validateAndFinish(simplifyCoordinates(points, 6), 'polygon')}
             className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg font-bold transition-colors flex items-center gap-1 shadow-sm"
           >
             <Check className="w-3.5 h-3.5" /> Finish
@@ -367,6 +434,7 @@ export default function DigitalFarmMap({
   viewMode = 'health',
   isEditingVertices = false,
   isMoveMode = false,
+  isResizeMode = false,
   onSelectZone = () => {},
   onUpdateFarmBoundary = () => {},
   onAddFieldWithGeometry = () => {},
@@ -383,6 +451,14 @@ export default function DigitalFarmMap({
   activeVisualizationMode,
   onToggleVisualizationMode,
 }: DigitalFarmMapProps) {
+  // Currently active boundary for editing (selected zone if one is selected, else entire farm boundary)
+  const activeTargetBoundary = useMemo<[number, number][] | undefined>(() => {
+    if (selectedZoneIndex !== null && zones[selectedZoneIndex]?.boundary) {
+      return zones[selectedZoneIndex].boundary;
+    }
+    return farmBoundary;
+  }, [selectedZoneIndex, zones, farmBoundary]);
+
   // Visualization Mode State (Real Weather vs Simulation vs Standard)
   const [visMode, setVisMode] = useState<MapVisualizationMode>(
     activeVisualizationMode || (simulatedWeatherCondition ? 'simulation' : liveWeather ? 'real_weather' : 'standard')
@@ -885,6 +961,84 @@ export default function DigitalFarmMap({
               </Marker>
             )}
           </>
+        )}
+
+        {/* 3c. MIDPOINT EDGE HANDLES: Drag + on any edge to insert a new corner point */}
+        {isEditingVertices && activeTargetBoundary && activeTargetBoundary.length >= 3 && (
+          activeTargetBoundary.map((pt, i) => {
+            const nextPt = activeTargetBoundary[(i + 1) % activeTargetBoundary.length];
+            const midPt: [number, number] = [(pt[0] + nextPt[0]) / 2, (pt[1] + nextPt[1]) / 2];
+            return (
+              <Marker
+                key={`midpoint-${selectedZoneIndex ?? 'farm'}-${i}`}
+                position={midPt}
+                icon={midpointPinIcon}
+                draggable={true}
+                eventHandlers={{
+                  dragend(e) {
+                    const newPt: [number, number] = [e.target.getLatLng().lat, e.target.getLatLng().lng];
+                    const updated = [...activeTargetBoundary];
+                    updated.splice(i + 1, 0, newPt);
+                    if (selectedZoneIndex !== null) {
+                      onUpdateZoneBoundary(selectedZoneIndex, updated);
+                    } else {
+                      onUpdateFarmBoundary(updated, 'polygon');
+                    }
+                  },
+                }}
+              >
+                <Tooltip direction="top" offset={[0, -10]}>
+                  <div className="text-[10px] font-bold text-blue-800 bg-white/95 px-1.5 py-0.5 rounded shadow border border-blue-200">
+                    + Drag to add corner
+                  </div>
+                </Tooltip>
+              </Marker>
+            );
+          })
+        )}
+
+        {/* 3d. DIRECT MOUSE SCALE RESIZE PIN: Drag outward to expand, inward to shrink */}
+        {(isResizeMode || isEditingVertices) && activeTargetBoundary && activeTargetBoundary.length >= 3 && (
+          (() => {
+            const center = getPolygonCenter(activeTargetBoundary);
+            let maxDist = 0;
+            let furthestPt = activeTargetBoundary[0];
+            activeTargetBoundary.forEach((pt) => {
+              const d = haversineDistance(center, pt);
+              if (d > maxDist) {
+                maxDist = d;
+                furthestPt = pt;
+              }
+            });
+            const currentAcres = calculatePolygonArea(activeTargetBoundary).acres;
+
+            return (
+              <Marker
+                position={furthestPt}
+                icon={resizePinIcon}
+                draggable={true}
+                eventHandlers={{
+                  dragend(e) {
+                    const newPos: [number, number] = [e.target.getLatLng().lat, e.target.getLatLng().lng];
+                    const currentDist = haversineDistance(center, newPos);
+                    const factor = maxDist > 0 ? currentDist / maxDist : 1;
+                    const scaled = scalePolygonByFactor(activeTargetBoundary, factor);
+                    if (selectedZoneIndex !== null) {
+                      onUpdateZoneBoundary(selectedZoneIndex, scaled);
+                    } else {
+                      onUpdateFarmBoundary(scaled, 'polygon');
+                    }
+                  },
+                }}
+              >
+                <Tooltip permanent={true} direction="top" offset={[0, -16]}>
+                  <div className="text-[11px] font-bold text-amber-900 bg-amber-50 px-2.5 py-0.5 rounded shadow-md border border-amber-400">
+                    ↔ Drag to Scale Size ({currentAcres} ac)
+                  </div>
+                </Tooltip>
+              </Marker>
+            );
+          })()
         )}
 
         {/* 4. ACTIVE DRAWING CONTROLLER */}
