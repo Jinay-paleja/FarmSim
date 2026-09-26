@@ -47,6 +47,12 @@ export const DEMO_FARMERS: FarmerProfile[] = [
   },
 ];
 
+/**
+ * Global switch for demo farmer accounts.
+ * Set to `false` whenever you want to disable demo accounts completely.
+ */
+export const ENABLE_DEMO_FARMERS = true;
+
 interface AuthContextType {
   user: User | null;
   farmerProfile: FarmerProfile | null;
@@ -73,8 +79,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch {
       // fallback
     }
-    // Default to first demo farmer for immediate rich experience
-    return DEMO_FARMERS[0];
+    // Default to first demo farmer if enabled, otherwise unauthenticated
+    return ENABLE_DEMO_FARMERS ? DEMO_FARMERS[0] : null;
   });
 
   // Save to localStorage when user changes
@@ -191,7 +197,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         signup,
         demoLogin,
         logout,
-        availableDemoFarmers: DEMO_FARMERS,
+        availableDemoFarmers: ENABLE_DEMO_FARMERS ? DEMO_FARMERS : [],
       }}
     >
       {children}

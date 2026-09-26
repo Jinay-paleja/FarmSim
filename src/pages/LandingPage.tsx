@@ -9,7 +9,7 @@ import { useAuth, DEMO_FARMERS } from '../context/AuthContext';
 
 export default function LandingPage() {
   const navigate = useNavigate();
-  const { user, farmerProfile, demoLogin } = useAuth();
+  const { user, farmerProfile, demoLogin, availableDemoFarmers } = useAuth();
   const { farms, loadingFarms, selectFarm, allFarms } = useFarmContext();
 
   const features = [
@@ -191,33 +191,35 @@ export default function LandingPage() {
             </div>
 
             {/* Quick Demo Profile Switcher */}
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1">
-                <Sparkles className="w-3 h-3 text-amber-500" /> Switch Farmer:
-              </span>
-              {DEMO_FARMERS.map((farmer) => {
-                const isActive = user?.id === farmer.id;
-                return (
-                  <button
-                    key={farmer.id}
-                    type="button"
-                    onClick={() => {
-                      demoLogin(farmer.id);
-                      const farm = allFarms.find((f) => f.ownerId === farmer.id);
-                      if (farm) selectFarm(farm.id);
-                    }}
-                    className={`px-2.5 py-1 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
-                      isActive
-                        ? 'bg-farm-green text-white shadow-xs'
-                        : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-100'
-                    }`}
-                  >
-                    <span>{farmer.avatarEmoji}</span>
-                    <span>{farmer.name.split(' ')[0]}</span>
-                  </button>
-                );
-              })}
-            </div>
+            {availableDemoFarmers.length > 0 && (
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1">
+                  <Sparkles className="w-3 h-3 text-amber-500" /> Switch Farmer:
+                </span>
+                {availableDemoFarmers.map((farmer) => {
+                  const isActive = user?.id === farmer.id;
+                  return (
+                    <button
+                      key={farmer.id}
+                      type="button"
+                      onClick={() => {
+                        demoLogin(farmer.id);
+                        const farm = allFarms.find((f) => f.ownerId === farmer.id);
+                        if (farm) selectFarm(farm.id);
+                      }}
+                      className={`px-2.5 py-1 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
+                        isActive
+                          ? 'bg-farm-green text-white shadow-xs'
+                          : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-100'
+                      }`}
+                    >
+                      <span>{farmer.avatarEmoji}</span>
+                      <span>{farmer.name.split(' ')[0]}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
           {!loadingFarms && farms.length > 0 ? (

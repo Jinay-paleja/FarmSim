@@ -13,7 +13,7 @@ export default function Layout() {
   const dropdownRef = useRef<HTMLDivElement>(null);
   const userDropdownRef = useRef<HTMLDivElement>(null);
 
-  const { user, farmerProfile, demoLogin, logout, isAuthenticated } = useAuth();
+  const { user, farmerProfile, demoLogin, logout, isAuthenticated, availableDemoFarmers } = useAuth();
   const { farms, selectedFarm, selectFarm, allFarms } = useFarmContext();
 
   // Extract farmId from URL if present
@@ -236,32 +236,36 @@ export default function Layout() {
                       </div>
 
                       {/* 1-Click Demo Profiles */}
-                      <div className="px-3.5 py-1.5 text-[10px] font-bold uppercase tracking-wider text-gray-400">
-                        Switch Demo Farmer
-                      </div>
-                      <div className="space-y-0.5 px-2">
-                        {DEMO_FARMERS.map((farmer) => {
-                          const isCurrent = user.id === farmer.id;
-                          return (
-                            <button
-                              key={farmer.id}
-                              type="button"
-                              onClick={() => handleDemoSwitch(farmer.id)}
-                              className={`w-full px-2.5 py-1.5 rounded-lg text-left text-xs flex items-center justify-between transition-colors cursor-pointer ${
-                                isCurrent
-                                  ? 'bg-farm-green-pale text-farm-green font-bold'
-                                  : 'hover:bg-gray-50 text-gray-700'
-                              }`}
-                            >
-                              <div className="flex items-center gap-2 truncate">
-                                <span>{farmer.avatarEmoji}</span>
-                                <span className="truncate">{farmer.name}</span>
-                              </div>
-                              {isCurrent && <Check className="w-3.5 h-3.5 text-farm-green flex-shrink-0" />}
-                            </button>
-                          );
-                        })}
-                      </div>
+                      {availableDemoFarmers.length > 0 && (
+                        <>
+                          <div className="px-3.5 py-1.5 text-[10px] font-bold uppercase tracking-wider text-gray-400">
+                            Switch Demo Farmer
+                          </div>
+                          <div className="space-y-0.5 px-2">
+                            {availableDemoFarmers.map((farmer) => {
+                              const isCurrent = user.id === farmer.id;
+                              return (
+                                <button
+                                  key={farmer.id}
+                                  type="button"
+                                  onClick={() => handleDemoSwitch(farmer.id)}
+                                  className={`w-full px-2.5 py-1.5 rounded-lg text-left text-xs flex items-center justify-between transition-colors cursor-pointer ${
+                                    isCurrent
+                                      ? 'bg-farm-green-pale text-farm-green font-bold'
+                                      : 'hover:bg-gray-50 text-gray-700'
+                                  }`}
+                                >
+                                  <div className="flex items-center gap-2 truncate">
+                                    <span>{farmer.avatarEmoji}</span>
+                                    <span className="truncate">{farmer.name}</span>
+                                  </div>
+                                  {isCurrent && <Check className="w-3.5 h-3.5 text-farm-green flex-shrink-0" />}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </>
+                      )}
 
                       {/* Actions */}
                       <div className="border-t border-gray-100 mt-2 pt-1.5 px-2 space-y-1">

@@ -11,7 +11,7 @@ import { useFarmContext } from '../context/FarmContext';
 export default function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, login, signup, demoLogin, isAuthenticated } = useAuth();
+  const { user, login, signup, demoLogin, availableDemoFarmers } = useAuth();
   const { farms, allFarms } = useFarmContext();
 
   const [mode, setMode] = useState<'signin' | 'signup'>('signin');
@@ -88,49 +88,52 @@ export default function LoginPage() {
     }
   };
 
+  const hasDemoAccounts = availableDemoFarmers.length > 0;
+
   return (
     <div className="min-h-[calc(100vh-4rem)] bg-stone-50 py-10 px-4 sm:px-6 lg:px-8 flex items-center justify-center">
-      <div className="max-w-4xl w-full grid md:grid-cols-12 gap-8 items-center">
-        {/* Left Side: Context & Demo Accounts */}
-        <div className="md:col-span-5 space-y-6">
-          <div>
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-farm-green-pale text-farm-green text-xs font-bold uppercase tracking-wider mb-3">
-              <Tractor className="w-3.5 h-3.5" /> Farmer Portal
-            </div>
-            <h1 className="text-3xl font-extrabold text-gray-900 leading-tight">
-              Manage Your Digital Twin Farms
-            </h1>
-            <p className="text-sm text-gray-600 mt-2">
-              Every farmer has isolated access to their farm boundaries, satellite field zones, live weather intelligence, and AI scenario simulations.
-            </p>
-          </div>
-
-          {/* Quick Demo Logins */}
-          <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="text-xs font-bold text-gray-800 uppercase tracking-wider flex items-center gap-1.5">
-                <Sparkles className="w-3.5 h-3.5 text-amber-500" /> 1-Click Demo Farmers
+      <div className={`w-full ${hasDemoAccounts ? 'max-w-4xl grid md:grid-cols-12 gap-8 items-center' : 'max-w-md mx-auto space-y-6'}`}>
+        {/* Left Side: Context & Demo Accounts (when enabled) */}
+        {hasDemoAccounts && (
+          <div className="md:col-span-5 space-y-6">
+            <div>
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-farm-green-pale text-farm-green text-xs font-bold uppercase tracking-wider mb-3">
+                <Tractor className="w-3.5 h-3.5" /> Farmer Portal
               </div>
-              <span className="text-[10px] bg-amber-50 text-amber-700 px-2 py-0.5 rounded-full font-medium">Instant Access</span>
+              <h1 className="text-3xl font-extrabold text-gray-900 leading-tight">
+                Manage Your Digital Twin Farms
+              </h1>
+              <p className="text-sm text-gray-600 mt-2">
+                Every farmer has isolated access to their farm boundaries, satellite field zones, live weather intelligence, and AI scenario simulations.
+              </p>
             </div>
-            <p className="text-xs text-gray-500">
-              Test multi-user isolation right away with pre-configured regional farms:
-            </p>
 
-            <div className="space-y-2.5 pt-1">
-              {DEMO_FARMERS.map((farmer) => {
-                const isSelected = user?.id === farmer.id;
-                return (
-                  <button
-                    key={farmer.id}
-                    type="button"
-                    onClick={() => handleDemoSelect(farmer.id)}
-                    className={`w-full text-left p-3 rounded-xl border transition-all flex items-center justify-between group cursor-pointer ${
-                      isSelected
-                        ? 'border-farm-green bg-farm-green-pale/40 shadow-xs'
-                        : 'border-gray-100 hover:border-gray-300 hover:bg-stone-50 bg-white'
-                    }`}
-                  >
+            {/* Quick Demo Logins */}
+            <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="text-xs font-bold text-gray-800 uppercase tracking-wider flex items-center gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5 text-amber-500" /> 1-Click Demo Farmers
+                </div>
+                <span className="text-[10px] bg-amber-50 text-amber-700 px-2 py-0.5 rounded-full font-medium">Instant Access</span>
+              </div>
+              <p className="text-xs text-gray-500">
+                Test multi-user isolation right away with pre-configured regional farms:
+              </p>
+
+              <div className="space-y-2.5 pt-1">
+                {availableDemoFarmers.map((farmer) => {
+                  const isSelected = user?.id === farmer.id;
+                  return (
+                    <button
+                      key={farmer.id}
+                      type="button"
+                      onClick={() => handleDemoSelect(farmer.id)}
+                      className={`w-full text-left p-3 rounded-xl border transition-all flex items-center justify-between group cursor-pointer ${
+                        isSelected
+                          ? 'border-farm-green bg-farm-green-pale/40 shadow-xs'
+                          : 'border-gray-100 hover:border-gray-300 hover:bg-stone-50 bg-white'
+                      }`}
+                    >
                     <div className="flex items-center gap-3 min-w-0">
                       <div className="w-10 h-10 rounded-xl bg-farm-green-pale flex items-center justify-center text-xl flex-shrink-0">
                         {farmer.avatarEmoji}
@@ -167,9 +170,10 @@ export default function LoginPage() {
             </div>
           </div>
         </div>
+        )}
 
-        {/* Right Side: Auth Box */}
-        <div className="md:col-span-7">
+        {/* Right Side / Centered: Auth Box */}
+        <div className={hasDemoAccounts ? "md:col-span-7" : "w-full"}>
           <div className="bg-white rounded-3xl border border-gray-200 shadow-xl overflow-hidden">
             {/* Header Tabs */}
             <div className="grid grid-cols-2 border-b border-gray-100 bg-stone-50/60 p-1.5 gap-1">
