@@ -1,12 +1,56 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // FarmSim accesses Firestore through the FastAPI service and its Firebase
-    // Admin SDK. Admin SDK calls bypass these rules; browsers do not. Keeping
-    // direct browser access closed prevents a user from querying another
-    // farmer's farms with the Firebase client or the DevTools console.
-    match /{document=**} {
-      allow read, write: if false;
+    // FarmSim allows browser-side Firestore access when the frontend has
+    // signed in with a Firebase custom token issued by the FastAPI service.
+    // Admin SDK calls from the backend always bypass these rules.
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function uid() {
+      return request.auth.uid;
+    }
+
+    // Helper: read the owner id from either camelCase (browser) or snake_case
+    // (backend Admin SDK) field name so both writers agree on ownership.
+    function ownerIdOf(docData) {
+      return docData['ownerId'] != null ? docData['ownerId'] : docData['owner_id'];
+    }
+
+    // ---- Users --------------------------------------------------------------
+    // A user may only read and write their own profile document.
+    match /users/{userId} {
+      allow read, write: if isSignedIn() && uid() == userId;
+    }
+
+    // ---- Farms ---------------------------------------------------------------
+    match /farms/{farmId} {
+      allow create: if isSignedIn() && ownerIdOf(request.resource.data) == uid();
+      allow read, update, delete: if isSignedIn() && ownerIdOf(resource.data) == uid();
+    }
+
+    // ---- Zones (owned through the parent farm) ------------------------------
+    match /zones/{zoneId} {
+      allow create: if isSignedIn() && ownerIdOf(request.resource.data) == uid();
+      allow read, update, delete: if isSignedIn() && ownerIdOf(resource.data) == uid();
+    }
+
+    // ---- Scenarios (owned through the parent farm) --------------------------
+    match /scenarios/{scenarioId} {
+      allow create: if isSignedIn() && ownerIdOf(request.resource.data) == uid();
+      allow read, update, delete: if isSignedIn() && ownerIdOf(resource.data) == uid();
+    }
+
+    // ---- Simulations (owned through the parent farm) ------------------------
+    match /simulations/{simulationId} {
+      allow create: if isSignedIn() && ownerIdOf(request.resource.data) == uid();
+      allow read, update, delete: if isSignedIn() && ownerIdOf(resource.data) == uid();
+    }
+
+    match /simulation_results/{simulationId} {
+      allow create: if isSignedIn() && ownerIdOf(request.resource.data) == uid();
+      allow read, update, delete: if isSignedIn() && ownerIdOf(resource.data) == uid();
     }
   }
 }

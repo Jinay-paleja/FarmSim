@@ -1,6 +1,9 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { signInWithCustomToken, signOut } from 'firebase/auth';
 import type { User } from '../types';
 import { userApi } from '../services/api';
+import { firestoreService } from '../services/firestoreService';
+import { auth, isFirebaseConfigured } from '../config/firebase';
 
 export interface FarmerProfile extends User {
   region: string;
@@ -116,9 +119,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     // Accounts are persisted by the FastAPI service, which uses the Firebase
-    // Admin SDK. Do not fall back to a browser-only account: that makes a
-    // failed Firestore write appear to be a successful registration.
+    // Admin SDK. The browser also signs in with a Firebase custom token so it
+    // can read/write Firestore directly under per-user security rules.
     const authenticatedUser = await userApi.login(cleanEmail, password);
+
+    const firebaseToken = localStorage.getItem('firebase_token');
+    if (firebaseToken && isFirebaseConfigured && auth) {
+      try {
+        await signInWithCustomToken(auth, firebaseToken);
+      } catch (err) {
+        console.warn('Firebase Auth sign-in failed:', err);
+      }
+    }
+
+    // Best-effort direct Firestore write. The backend already persists the user
+    // via Admin SDK; this mirrors the document for browser-side reads.
+    firestoreService.saveUser(authenticatedUser);
+
     setUser(authenticatedUser);
     return true;
   }, []);
@@ -126,6 +143,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signup = useCallback(async (input: { name: string; email: string; password?: string; location?: string; specialty?: string }): Promise<User> => {
     const cleanEmail = input.email.trim().toLowerCase();
     const newUser = await userApi.register({ ...input, email: cleanEmail });
+
+    const firebaseToken = localStorage.getItem('firebase_token');
+    if (firebaseToken && isFirebaseConfigured && auth) {
+      try {
+        await signInWithCustomToken(auth, firebaseToken);
+      } catch (err) {
+        console.warn('Firebase Auth sign-in failed:', err);
+      }
+    }
+
+    // Best-effort direct Firestore write so the user document is available
+    // for browser-side queries and Firestore security rules.
+    firestoreService.saveUser(newUser);
 
     setUser(newUser);
     return newUser;
@@ -143,6 +173,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(null);
     localStorage.removeItem(USER_STORAGE_KEY);
     localStorage.removeItem('auth_token');
+    localStorage.removeItem('firebase_token');
+
+    if (isFirebaseConfigured && auth) {
+      signOut(auth).catch((err) => console.warn('Firebase Auth sign-out failed:', err));
+    }
   }, []);
 
   return (

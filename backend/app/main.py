@@ -143,6 +143,23 @@ def as_farm(repository: Repository, farm_id: str) -> Farm:
     return Farm.model_validate(farm)
 
 
+def _create_firebase_custom_token(uid: str) -> str | None:
+    """Issue a Firebase custom token for browser-side Firebase Auth sign-in.
+
+    Returns None when the Admin SDK is unavailable so the app can still fall
+    back to backend-only persistence.
+    """
+    try:
+        from firebase_admin import auth as firebase_auth
+    except ImportError:
+        return None
+    try:
+        return firebase_auth.create_custom_token(uid)
+    except Exception as exc:
+        print(f"[warn] Could not create Firebase custom token for {uid}: {exc}")
+        return None
+
+
 def create_api_router(
     repository: Repository,
     ai_service: AgriculturalAIService,
@@ -167,7 +184,13 @@ def create_api_router(
     def profile_with_session(user: User) -> UserProfile:
         token = token_urlsafe(32)
         sessions[token] = (user.user_id, utc_now() + timedelta(hours=12))
-        return UserProfile.model_validate(user).model_copy(update={"session_token": token})
+        # Also issue a Firebase custom token so the browser can sign in with
+        # Firebase Auth and access Firestore directly under per-user rules.
+        firebase_token = _create_firebase_custom_token(user.user_id)
+        return UserProfile.model_validate(user).model_copy(update={
+            "session_token": token,
+            "firebase_token": firebase_token,
+        })
 
     def owned_farm(farm_id: str, request: Request) -> dict[str, Any]:
         farm = build_farm(repository, farm_id)

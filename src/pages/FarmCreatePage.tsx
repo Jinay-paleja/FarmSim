@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { MapPin, Ruler, Grid3x3, Sprout, ArrowRight, Loader2, Sparkles, User as UserIcon } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { farmApi } from '../services/api';
+import { firestoreService } from '../services/firestoreService';
 import { isMockEnabled, createMockFarm } from '../services/mockData';
 import { useFarmContext } from '../context/FarmContext';
 import { useAuth } from '../context/AuthContext';
@@ -63,30 +64,35 @@ export default function FarmCreatePage() {
     };
 
     try {
-      let farm: Farm;
-      try {
-        farm = await farmApi.create(payload);
-      } catch {
-        if (isMockEnabled()) {
-          farm = createMockFarm(payload);
-          // Store in localStorage for mock mode
-          const farms = JSON.parse(localStorage.getItem('farms') || '[]');
-          farms.push(farm);
-          localStorage.setItem('farms', JSON.stringify(farms));
-          toast.success('Farm created (offline mode)');
-        } else {
-          throw new Error('Failed to create farm');
-        }
-      }
-      await refreshFarms();
-      selectFarm(farm.id);
-      toast.success('Farm created successfully! Opening Farm Map Builder...');
-      navigate(`/farms/${farm.id}/builder`);
-    } catch (err: any) {
-      toast.error(err?.message || 'Failed to create farm');
-    } finally {
-      setLoading(false);
-    }
+       let farm: Farm;
+       try {
+         farm = await farmApi.create(payload);
+       } catch {
+         if (isMockEnabled()) {
+           farm = createMockFarm(payload);
+           // Store in localStorage for mock mode
+           const farms = JSON.parse(localStorage.getItem('farms') || '[]');
+           farms.push(farm);
+           localStorage.setItem('farms', JSON.stringify(farms));
+           toast.success('Farm created (offline mode)');
+         } else {
+           throw new Error('Failed to create farm');
+         }
+       }
+
+       // Persist the new farm to Firestore so the browser and backend share
+       // the same data source. The backend already creates the farm via Admin
+       // SDK; this mirrors it for browser-side reads.
+       await firestoreService.saveFarm(farm);
+       await refreshFarms();
+       selectFarm(farm.id);
+       toast.success('Farm created successfully! Opening Farm Map Builder...');
+       navigate(`/farms/${farm.id}/builder`);
+     } catch (err: any) {
+       toast.error(err?.message || 'Failed to create farm');
+     } finally {
+       setLoading(false);
+     }
   };
 
   const updateField = <K extends keyof FarmCreateInput>(key: K, value: FarmCreateInput[K]) => {

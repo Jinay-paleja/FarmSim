@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { farmApi, simulationApi } from '../services/api';
+import { firestoreService } from '../services/firestoreService';
 import { isMockEnabled, createMockSimulation } from '../services/mockData';
 import LoadingSpinner from '../components/shared/LoadingSpinner';
 import ErrorDisplay from '../components/shared/ErrorDisplay';
@@ -188,6 +189,7 @@ export default function FarmDashboardPage() {
           farmId: farm.id,
           zones: farm.zones,
         });
+        firestoreService.saveSimulation(result);
       } catch {
         if (isMockEnabled()) {
           result = createMockSimulation(farm.id, 'Baseline');

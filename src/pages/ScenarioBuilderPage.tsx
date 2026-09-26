@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { farmApi, scenarioApi, simulationApi } from '../services/api';
+import { firestoreService } from '../services/firestoreService';
 import { isMockEnabled, createMockSimulation } from '../services/mockData';
 import LoadingSpinner from '../components/shared/LoadingSpinner';
 import ErrorDisplay from '../components/shared/ErrorDisplay';
@@ -248,6 +249,8 @@ export default function ScenarioBuilderPage() {
       let result: SimulationResult;
       try {
         const createdScenario = await scenarioApi.create(scenarioPayload);
+        // Mirror scenario + simulation to Firestore for browser-side access.
+        firestoreService.saveScenario(createdScenario);
         result = await simulationApi.run({
           farmId: farm.id,
           scenarioId: createdScenario.id,
@@ -256,6 +259,7 @@ export default function ScenarioBuilderPage() {
           mode: 'what_if',
           durationDays: structuredScenarioJson.duration_days,
         });
+        firestoreService.saveSimulation(result);
       } catch {
         if (isMockEnabled()) {
           result = createMockSimulation(

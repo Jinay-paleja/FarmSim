@@ -780,49 +780,55 @@ export const aiApi = {
 // User Auth & Registration API
 // ============================================================
 export const userApi = {
-  register: async (input: { name: string; email: string; password?: string; location?: string; specialty?: string }): Promise<User> => {
-    const res = await apiClient.post('/users/register', input);
-    if (res.data.session_token) {
-      localStorage.setItem('auth_token', res.data.session_token);
-    }
-    return {
-      id: res.data.user_id || res.data.id,
-      name: res.data.name,
-      email: res.data.email,
-      location: res.data.location || 'Local Farm Region',
-      joinedAt: res.data.joined_at || new Date().toISOString().split('T')[0],
-    };
-  },
+   register: async (input: { name: string; email: string; password?: string; location?: string; specialty?: string }): Promise<User> => {
+     const res = await apiClient.post('/users/register', input);
+     if (res.data.session_token) {
+       localStorage.setItem('auth_token', res.data.session_token);
+     }
+     if (res.data.firebase_token) {
+       localStorage.setItem('firebase_token', res.data.firebase_token);
+     }
+     return {
+       id: res.data.user_id || res.data.id,
+       name: res.data.name,
+       email: res.data.email,
+       location: res.data.location || 'Local Farm Region',
+       joinedAt: res.data.joined_at || new Date().toISOString().split('T')[0],
+     };
+   },
 
-  login: async (email: string, password?: string): Promise<User> => {
-    const res = await apiClient.post('/users/login', { email, password });
-    if (res.data.session_token) {
-      localStorage.setItem('auth_token', res.data.session_token);
-    }
-    const user: User = {
-      id: res.data.user_id || res.data.id,
-      name: res.data.name,
-      email: res.data.email,
-      location: res.data.location || 'Local Farm Region',
-      joinedAt: res.data.joined_at || new Date().toISOString().split('T')[0],
-    };
-    return user;
-  },
+   login: async (email: string, password?: string): Promise<User> => {
+     const res = await apiClient.post('/users/login', { email, password });
+     if (res.data.session_token) {
+       localStorage.setItem('auth_token', res.data.session_token);
+     }
+     if (res.data.firebase_token) {
+       localStorage.setItem('firebase_token', res.data.firebase_token);
+     }
+     const user: User = {
+       id: res.data.user_id || res.data.id,
+       name: res.data.name,
+       email: res.data.email,
+       location: res.data.location || 'Local Farm Region',
+       joinedAt: res.data.joined_at || new Date().toISOString().split('T')[0],
+     };
+     return user;
+   },
 
-  list: async (): Promise<User[]> => {
-    try {
-      const res = await apiClient.get('/users');
-      return res.data.map((u: any) => ({
-        id: u.user_id || u.id,
-        name: u.name,
-        email: u.email,
-        location: u.location,
-        joinedAt: u.joined_at || u.joinedAt,
-      }));
-    } catch {
-      return [];
-    }
-  },
-};
+   list: async (): Promise<User[]> => {
+     try {
+       const res = await apiClient.get('/users');
+       return res.data.map((u: any) => ({
+         id: u.user_id || u.id,
+         name: u.name,
+         email: u.email,
+         location: u.location,
+         joinedAt: u.joined_at || u.joinedAt,
+       }));
+     } catch {
+       return [];
+     }
+   },
+ };
 
 export default apiClient;

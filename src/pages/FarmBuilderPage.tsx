@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { farmApi, zoneApi } from '../services/api';
+import { firestoreService } from '../services/firestoreService';
 import { isMockEnabled } from '../services/mockData';
 import LoadingSpinner from '../components/shared/LoadingSpinner';
 import ErrorDisplay from '../components/shared/ErrorDisplay';
@@ -426,31 +427,34 @@ export default function FarmBuilderPage() {
         updatedAt: new Date().toISOString(),
       };
 
-      // Try API first
-      try {
-        await farmApi.update(farm.id, updatedFarm);
-        for (let i = 0; i < zones.length; i++) {
-          if (farm.zones[i]) {
-            await zoneApi.update(farm.id, farm.zones[i].id, zones[i]);
-          } else {
-            await zoneApi.create(farm.id, zones[i]);
-          }
-        }
-      } catch {
-        // Fallback to localStorage
-        if (isMockEnabled()) {
-          const farms = JSON.parse(localStorage.getItem('farms') || '[]') as Farm[];
-          const idx = farms.findIndex((f) => f.id === farm.id);
-          if (idx !== -1) {
-            farms[idx] = updatedFarm;
-          } else {
-            farms.push(updatedFarm);
-          }
-          localStorage.setItem('farms', JSON.stringify(farms));
-        } else {
-          throw new Error('Failed to save farm and field map data');
-        }
-      }
+       // Try API first
+       try {
+         await farmApi.update(farm.id, updatedFarm);
+         for (let i = 0; i < zones.length; i++) {
+           if (farm.zones[i]) {
+             await zoneApi.update(farm.id, farm.zones[i].id, zones[i]);
+           } else {
+             await zoneApi.create(farm.id, zones[i]);
+           }
+         }
+       } catch {
+         // Fallback to localStorage
+         if (isMockEnabled()) {
+           const farms = JSON.parse(localStorage.getItem('farms') || '[]') as Farm[];
+           const idx = farms.findIndex((f) => f.id === farm.id);
+           if (idx !== -1) {
+             farms[idx] = updatedFarm;
+           } else {
+             farms.push(updatedFarm);
+           }
+           localStorage.setItem('farms', JSON.stringify(farms));
+         } else {
+           throw new Error('Failed to save farm and field map data');
+         }
+       }
+
+       // Persist to Firestore so browser and backend share the same store.
+       await firestoreService.saveFarm(updatedFarm);
 
       // Synchronize in shared application state
       updateFarmInState(updatedFarm);

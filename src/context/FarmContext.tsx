@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import type { Farm, Zone } from '../types';
 import { farmApi } from '../services/api';
+import { firestoreService } from '../services/firestoreService';
 import { isMockEnabled, ensureDefaultFarms } from '../services/mockData';
 import { useAuth } from './AuthContext';
 
@@ -38,18 +39,37 @@ export function FarmProvider({ children }: { children: React.ReactNode }) {
 
     setLoadingFarms(true);
     try {
-      let list: Farm[];
+      let list: Farm[] = [];
+      let gotData = false;
+
+      // 1. Try Firestore first (direct browser access after Firebase Auth sign-in).
+      //    always scoped to the current ownerId — no unfiltered reads.
       try {
-        // Scope the query at the data source as well as in the UI.
-        list = await farmApi.list(userId);
+        list = await firestoreService.getFarms(userId);
+        gotData = true;
       } catch {
-        // Demo data is intentionally opt-in and is still filtered by owner.
+        // Firestore read failed, fall through to backend API.
+      }
+
+      // 2. Fall back to the backend API (which uses the Admin SDK or SQLite).
+      if (!gotData || list.length === 0) {
+        try {
+          list = await farmApi.list(userId);
+          gotData = true;
+        } catch {
+          // Backend API failed, fall through to mocks.
+        }
+      }
+
+      // 3. Fall back to mock data (demo mode) — still filtered by owner.
+      if (!gotData || list.length === 0) {
         if (isMockEnabled()) {
           list = ensureDefaultFarms().filter((farm) => farm.ownerId === userId);
         } else {
           list = [];
         }
       }
+
       setAllFarms(list);
     } catch {
       if (isMockEnabled()) {
@@ -122,6 +142,9 @@ export function FarmProvider({ children }: { children: React.ReactNode }) {
       }
       return [...prev, farmWithOwner];
     });
+
+    // Persist to Firestore so the browser and backend share the same store.
+    firestoreService.saveFarm(farmWithOwner);
 
     if (isMockEnabled()) {
       try {

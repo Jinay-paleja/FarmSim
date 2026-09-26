@@ -85,6 +85,9 @@ class UserProfile(ContractModel):
     # Returned only after a successful registration or sign-in. It is never
     # persisted in the Firestore user document.
     session_token: str | None = None
+    # Firebase custom token allowing the browser to sign in with Firebase Auth
+    # so it can read/write Firestore directly with per-user security rules.
+    firebase_token: str | None = None
 
 
 class ZoneInput(ContractModel):
