@@ -32,17 +32,23 @@ def get_firestore_client() -> Any:
         raise FirebaseStorageError("firebase-admin package is not installed.") from exc
 
     credentials_path = settings.firebase_credentials_file
-    project_id = settings.firebase_project_id or "farmsim-e8973"
+    project_id = settings.firebase_project_id or "farm-1de17"
 
     if not firebase_admin._apps:
         cred = None
         if credentials_path:
-            abs_path = Path(credentials_path).resolve()
+            from ..config import BACKEND_DIR
+            candidate = Path(credentials_path)
+            abs_path = candidate if candidate.is_absolute() else (BACKEND_DIR / candidate).resolve()
+            if not abs_path.exists():
+                abs_path = Path(credentials_path).resolve()
             if abs_path.exists() and abs_path.is_file():
                 try:
                     cred = credentials.Certificate(str(abs_path))
                 except Exception as exc:
                     raise FirebaseStorageError(f"Failed to parse Firebase service-account JSON at {abs_path}: {exc}") from exc
+            else:
+                raise FirebaseStorageError(f"Firebase credentials file not found at {abs_path}")
 
         if cred is None:
             try:

@@ -86,7 +86,7 @@ export default function FarmCreatePage() {
 
     const payload: FarmCreateInput = {
       ...form,
-      ownerId: user?.id || 'farmer_punjab',
+      ownerId: user?.id || '',
       latitude: centerLat,
       longitude: centerLng,
       boundary: hasBoundary ? boundaryPoints : undefined,

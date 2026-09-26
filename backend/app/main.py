@@ -226,66 +226,6 @@ def create_api_router(
         )
         try:
             repository.create_user(user.model_dump(mode="json"))
-
-            # Create default farm for newly registered farmer
-            default_farm_id = new_id("farm")
-            farm = Farm(
-                farm_id=default_farm_id,
-                owner_id=user_id,
-                name=f"{payload.name}'s Farm",
-                location=payload.location or "Local Farm Region",
-                area_acres=10.0,
-                latitude=30.901,
-                longitude=75.857,
-                number_of_zones=2,
-                zones=[],
-                created_at=utc_now(),
-                updated_at=utc_now(),
-            )
-            repository.create_farm(farm.model_dump(mode="json"))
-
-            # Add 2 initial zones for the farm
-            z1 = Zone(
-                zone_id=new_id("zone"),
-                farm_id=default_farm_id,
-                name="North Field",
-                area_acres=5.0,
-                crop="Wheat",
-                soil="Loamy",
-                growth_stage="Vegetative",
-                irrigation="Drip",
-                soil_moisture=55.0,
-                temperature=24.0,
-                humidity=60.0,
-                rainfall=100.0,
-                nitrogen=60.0,
-                phosphorus=30.0,
-                potassium=40.0,
-                health_score=88.0,
-                disease_risk=10.0,
-            )
-            z2 = Zone(
-                zone_id=new_id("zone"),
-                farm_id=default_farm_id,
-                name="South Field",
-                area_acres=5.0,
-                crop="Basmati Rice",
-                soil="Clay Loam",
-                growth_stage="Tiller",
-                irrigation="Flood",
-                soil_moisture=65.0,
-                temperature=26.0,
-                humidity=65.0,
-                rainfall=120.0,
-                nitrogen=70.0,
-                phosphorus=35.0,
-                potassium=45.0,
-                health_score=90.0,
-                disease_risk=8.0,
-            )
-            repository.create_zone(z1.model_dump(mode="json"))
-            repository.create_zone(z2.model_dump(mode="json"))
-
         except RepositoryError as exc:
             raise HTTPException(status_code=409, detail=str(exc)) from exc
         return profile_with_session(user)

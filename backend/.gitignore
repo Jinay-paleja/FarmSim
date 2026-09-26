@@ -3,3 +3,6 @@
 .venv/
 __pycache__/
 .pytest_cache/
+*service-account*.json
+*.json.json
+firebase-service-account.json

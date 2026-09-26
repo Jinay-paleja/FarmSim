@@ -339,7 +339,6 @@ def create_repository(database_url: str, firebase_service_account_path: str | No
         try:
             return FirestoreRepository(firebase_service_account_path)
         except RepositoryError as exc:
-            logger.warning("Firestore repository unavailable (%s). Falling back to SQLite.", exc)
-            fallback_db = "sqlite:///farmsim.db" if database_url.startswith("firestore://") else database_url
-            return SQLiteRepository(fallback_db)
+            logger.error("Firestore repository initialization failed: %s", exc)
+            raise exc
     return SQLiteRepository(database_url)

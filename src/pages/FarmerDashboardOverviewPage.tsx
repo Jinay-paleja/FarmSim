@@ -35,11 +35,11 @@ export default function FarmerDashboardOverviewPage() {
 
     const avgCropHealth = totalZones > 0
       ? Math.round(allZones.reduce((sum, z) => sum + (z.healthScore ?? 75), 0) / totalZones)
-      : 82;
+      : null;
 
     const avgSoilMoisture = totalZones > 0
       ? Math.round(allZones.reduce((sum, z) => sum + (z.soilMoisture ?? 55), 0) / totalZones)
-      : 58;
+      : null;
 
     return {
       totalFarms,
@@ -188,8 +188,12 @@ export default function FarmerDashboardOverviewPage() {
             <Heart className="w-4 h-4 text-emerald-500" />
           </div>
           <div className="flex items-baseline gap-2">
-            <div className="text-3xl font-extrabold text-emerald-600">{stats.avgCropHealth}%</div>
-            <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-bold">Good</span>
+            <div className="text-3xl font-extrabold text-emerald-600">
+              {stats.avgCropHealth !== null ? `${stats.avgCropHealth}%` : '--'}
+            </div>
+            {stats.avgCropHealth !== null && (
+              <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-bold">Good</span>
+            )}
           </div>
           <p className="text-xs text-gray-500 mt-1">Across all active crops</p>
         </div>
@@ -200,8 +204,12 @@ export default function FarmerDashboardOverviewPage() {
             <Droplets className="w-4 h-4 text-blue-500" />
           </div>
           <div className="flex items-baseline gap-2">
-            <div className="text-3xl font-extrabold text-blue-600">{stats.avgSoilMoisture}%</div>
-            <span className="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 font-bold">Optimal</span>
+            <div className="text-3xl font-extrabold text-blue-600">
+              {stats.avgSoilMoisture !== null ? `${stats.avgSoilMoisture}%` : '--'}
+            </div>
+            {stats.avgSoilMoisture !== null && (
+              <span className="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 font-bold">Optimal</span>
+            )}
           </div>
           <p className="text-xs text-gray-500 mt-1">Average sensor level</p>
         </div>

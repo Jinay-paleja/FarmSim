@@ -195,6 +195,8 @@ export const authService = {
     } finally {
       localStorage.removeItem(AUTH_TOKEN_KEY);
       localStorage.removeItem(USER_KEY);
+      localStorage.removeItem('activeFarmId');
+      localStorage.removeItem('farmsim_active_farm');
     }
   },
 

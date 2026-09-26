@@ -44,16 +44,17 @@ export function FarmProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  // Reload farms whenever active user changes
   useEffect(() => {
     loadFarms();
-  }, [loadFarms]);
+  }, [user?.id, loadFarms]);
 
   // Filter farms strictly by current logged in user (multi-tenant security)
   const userFarms = useMemo(() => {
     if (!user) return [];
     return allFarms.filter((f) => {
       const farmOwner = f.ownerId || f.owner_id;
-      return farmOwner === user.id || farmOwner === user.email || !farmOwner;
+      return farmOwner === user.id || farmOwner === user.email;
     });
   }, [allFarms, user]);
 
@@ -104,7 +105,7 @@ export function FarmProvider({ children }: { children: React.ReactNode }) {
   const updateFarmInState = useCallback((updated: Farm) => {
     const farmWithOwner: Farm = {
       ...updated,
-      ownerId: updated.ownerId || user?.id || 'farmer_punjab',
+      ownerId: updated.ownerId || user?.id || '',
     };
 
     setAllFarms((prev) => {
