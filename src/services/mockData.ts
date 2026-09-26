@@ -14,7 +14,7 @@ export function isMockEnabled(): boolean {
   return MOCK_ENABLED;
 }
 
-export function createMockFarm(input: { name: string; location: string; area: number; numberOfZones: number; latitude?: number; longitude?: number }): Farm {
+export function createMockFarm(input: { name: string; location: string; area: number; numberOfZones: number; latitude?: number; longitude?: number; ownerId?: string }): Farm {
   const farmId = `farm_${Date.now()}`;
   
   // Choose sensible center coordinates if not specified
@@ -102,6 +102,7 @@ export function createMockFarm(input: { name: string; location: string; area: nu
 
   return {
     id: farmId,
+    ownerId: input.ownerId || 'farmer_punjab',
     name: input.name,
     location: input.location,
     area: input.area,
@@ -194,6 +195,7 @@ export function ensureDefaultFarms(): Farm[] {
   const defaultSpecs = [
     {
       id: 'farm_green_valley',
+      ownerId: 'farmer_punjab',
       name: 'Green Valley Farm',
       location: 'Ludhiana, Punjab',
       area: 12.4,
@@ -203,6 +205,7 @@ export function ensureDefaultFarms(): Farm[] {
     },
     {
       id: 'farm_sunrise',
+      ownerId: 'farmer_california',
       name: 'Sunrise Farm',
       location: 'Fresno, California',
       area: 8.7,
@@ -212,6 +215,7 @@ export function ensureDefaultFarms(): Farm[] {
     },
     {
       id: 'farm_river',
+      ownerId: 'farmer_iowa',
       name: 'River Farm',
       location: 'Ames, Iowa',
       area: 21.2,
@@ -221,10 +225,25 @@ export function ensureDefaultFarms(): Farm[] {
     },
   ];
 
-  if (stored.length < 3) {
+  // Backfill ownerId for existing stored farms if missing
+  let updatedStored = false;
+  const backfilled = stored.map((f) => {
+    if (!f.ownerId) {
+      updatedStored = true;
+      if (f.id === 'farm_green_valley' || f.name.includes('Green Valley')) return { ...f, ownerId: 'farmer_punjab' };
+      if (f.id === 'farm_sunrise' || f.name.includes('Sunrise')) return { ...f, ownerId: 'farmer_california' };
+      if (f.id === 'farm_river' || f.name.includes('River')) return { ...f, ownerId: 'farmer_iowa' };
+      return { ...f, ownerId: 'farmer_punjab' };
+    }
+    return f;
+  });
+
+  if (backfilled.length < 3) {
     const seededFarms = defaultSpecs.map((spec) => {
-      const existing = stored.find((f) => f.id === spec.id || f.name === spec.name);
-      if (existing) return existing;
+      const existing = backfilled.find((f) => f.id === spec.id || f.name === spec.name);
+      if (existing) {
+        return { ...existing, ownerId: existing.ownerId || spec.ownerId };
+      }
       const created = createMockFarm({
         name: spec.name,
         location: spec.location,
@@ -232,19 +251,25 @@ export function ensureDefaultFarms(): Farm[] {
         numberOfZones: spec.numberOfZones,
         latitude: spec.latitude,
         longitude: spec.longitude,
+        ownerId: spec.ownerId,
       });
       created.id = spec.id;
+      created.ownerId = spec.ownerId;
       return created;
     });
 
     const merged = [
       ...seededFarms,
-      ...stored.filter((f) => !seededFarms.some((sf) => sf.id === f.id)),
+      ...backfilled.filter((f) => !seededFarms.some((sf) => sf.id === f.id)),
     ];
     localStorage.setItem('farms', JSON.stringify(merged));
     return merged;
   }
 
-  return stored;
+  if (updatedStored) {
+    localStorage.setItem('farms', JSON.stringify(backfilled));
+  }
+
+  return backfilled;
 }
 

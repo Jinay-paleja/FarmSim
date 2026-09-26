@@ -1,24 +1,38 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MapPin, Ruler, Grid3x3, Sprout, ArrowRight, Loader2, Sparkles } from 'lucide-react';
+import { MapPin, Ruler, Grid3x3, Sprout, ArrowRight, Loader2, Sparkles, User as UserIcon } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { farmApi } from '../services/api';
 import { isMockEnabled, createMockFarm } from '../services/mockData';
 import { useFarmContext } from '../context/FarmContext';
+import { useAuth } from '../context/AuthContext';
 import type { FarmCreateInput, Farm } from '../types';
 
 export default function FarmCreatePage() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const { refreshFarms, selectFarm } = useFarmContext();
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState<FarmCreateInput>({
     name: '',
-    location: '',
+    location: user?.location || '',
     area: 10,
     latitude: undefined,
     longitude: undefined,
     numberOfZones: 3,
+    ownerId: user?.id,
   });
+
+  useEffect(() => {
+    if (user) {
+      setForm((prev) => ({
+        ...prev,
+        ownerId: user.id,
+        location: prev.location || user.location || '',
+      }));
+    }
+  }, [user]);
+
   const [errors, setErrors] = useState<Partial<Record<keyof FarmCreateInput, string>>>({});
 
   const validate = (): boolean => {
@@ -43,13 +57,18 @@ export default function FarmCreatePage() {
     if (!validate()) return;
 
     setLoading(true);
+    const payload: FarmCreateInput = {
+      ...form,
+      ownerId: user?.id || 'farmer_punjab',
+    };
+
     try {
       let farm: Farm;
       try {
-        farm = await farmApi.create(form);
+        farm = await farmApi.create(payload);
       } catch {
         if (isMockEnabled()) {
-          farm = createMockFarm(form);
+          farm = createMockFarm(payload);
           // Store in localStorage for mock mode
           const farms = JSON.parse(localStorage.getItem('farms') || '[]');
           farms.push(farm);
@@ -91,6 +110,12 @@ export default function FarmCreatePage() {
           <p className="text-gray-500 ml-[52px]">
             Set up your farm details. You'll configure zones and crops in the next step.
           </p>
+          {user && (
+            <div className="ml-[52px] mt-3 inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-xs text-emerald-800">
+              <UserIcon className="w-3.5 h-3.5 text-emerald-600" />
+              <span>Owner account: <strong>{user.name}</strong> ({user.email})</span>
+            </div>
+          )}
         </div>
 
         {/* Form */}

@@ -2,8 +2,10 @@ import React, { createContext, useContext, useState, useEffect, useCallback, use
 import type { Farm, Zone } from '../types';
 import { farmApi } from '../services/api';
 import { isMockEnabled, ensureDefaultFarms } from '../services/mockData';
+import { useAuth } from './AuthContext';
 
 interface FarmContextType {
+  allFarms: Farm[];
   farms: Farm[];
   selectedFarmId: string | null;
   selectedFarm: Farm | null;
@@ -19,7 +21,8 @@ interface FarmContextType {
 const FarmContext = createContext<FarmContextType | undefined>(undefined);
 
 export function FarmProvider({ children }: { children: React.ReactNode }) {
-  const [farms, setFarms] = useState<Farm[]>([]);
+  const { user } = useAuth();
+  const [allFarms, setAllFarms] = useState<Farm[]>([]);
   const [selectedFarmId, setSelectedFarmId] = useState<string | null>(null);
   const [selectedZoneIndex, setSelectedZoneIndex] = useState<number | null>(null);
   const [loadingFarms, setLoadingFarms] = useState<boolean>(true);
@@ -41,19 +44,11 @@ export function FarmProvider({ children }: { children: React.ReactNode }) {
         list = ensureDefaultFarms();
       }
 
-      setFarms(list);
-
-      // If no farm selected yet, default to first farm
-      if (list.length > 0) {
-        setSelectedFarmId((prev) => (prev && list.some((f) => f.id === prev) ? prev : list[0].id));
-      }
+      setAllFarms(list);
     } catch {
       if (isMockEnabled()) {
         const seeded = ensureDefaultFarms();
-        setFarms(seeded);
-        if (seeded.length > 0) {
-          setSelectedFarmId(seeded[0].id);
-        }
+        setAllFarms(seeded);
       }
     } finally {
       setLoadingFarms(false);
@@ -63,6 +58,25 @@ export function FarmProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     loadFarms();
   }, [loadFarms]);
+
+  // Filter farms by current logged in user
+  const userFarms = useMemo(() => {
+    if (!user) return allFarms;
+    return allFarms.filter((f) => f.ownerId === user.id);
+  }, [allFarms, user]);
+
+  // Automatically sync selected farm to user's farms
+  useEffect(() => {
+    if (userFarms.length > 0) {
+      if (!selectedFarmId || !userFarms.some((f) => f.id === selectedFarmId)) {
+        setSelectedFarmId(userFarms[0].id);
+        setSelectedZoneIndex(null);
+      }
+    } else {
+      setSelectedFarmId(null);
+      setSelectedZoneIndex(null);
+    }
+  }, [userFarms, selectedFarmId]);
 
   const selectFarm = useCallback((farmId: string) => {
     setSelectedFarmId(farmId);
@@ -74,9 +88,9 @@ export function FarmProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const selectedFarm = useMemo(() => {
-    if (!selectedFarmId) return farms[0] || null;
-    return farms.find((f) => f.id === selectedFarmId) || farms[0] || null;
-  }, [farms, selectedFarmId]);
+    if (!selectedFarmId) return userFarms[0] || null;
+    return userFarms.find((f) => f.id === selectedFarmId) || userFarms[0] || null;
+  }, [userFarms, selectedFarmId]);
 
   const selectedZone = useMemo(() => {
     if (selectedZoneIndex === null || !selectedFarm || !selectedFarm.zones) return null;
@@ -84,36 +98,42 @@ export function FarmProvider({ children }: { children: React.ReactNode }) {
   }, [selectedFarm, selectedZoneIndex]);
 
   const updateFarmInState = useCallback((updated: Farm) => {
-    setFarms((prev) => {
-      const idx = prev.findIndex((f) => f.id === updated.id);
+    const farmWithOwner: Farm = {
+      ...updated,
+      ownerId: updated.ownerId || user?.id || 'farmer_punjab',
+    };
+
+    setAllFarms((prev) => {
+      const idx = prev.findIndex((f) => f.id === farmWithOwner.id);
       if (idx !== -1) {
         const copy = [...prev];
-        copy[idx] = updated;
+        copy[idx] = farmWithOwner;
         return copy;
       }
-      return [...prev, updated];
+      return [...prev, farmWithOwner];
     });
 
     if (isMockEnabled()) {
       try {
         const stored = JSON.parse(localStorage.getItem('farms') || '[]') as Farm[];
-        const idx = stored.findIndex((f) => f.id === updated.id);
+        const idx = stored.findIndex((f) => f.id === farmWithOwner.id);
         if (idx !== -1) {
-          stored[idx] = updated;
+          stored[idx] = farmWithOwner;
         } else {
-          stored.push(updated);
+          stored.push(farmWithOwner);
         }
         localStorage.setItem('farms', JSON.stringify(stored));
       } catch {
         // ignore
       }
     }
-  }, []);
+  }, [user]);
 
   return (
     <FarmContext.Provider
       value={{
-        farms,
+        allFarms,
+        farms: userFarms,
         selectedFarmId,
         selectedFarm,
         selectedZoneIndex,

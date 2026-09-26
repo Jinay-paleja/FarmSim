@@ -12,8 +12,20 @@ export type FieldStressState =
   | 'heat_stress'
   | 'disease';
 
+export interface User {
+  id: string;
+  name: string;
+  email: string;
+  location?: string;
+  avatar?: string;
+  phone?: string;
+  preferredLanguage?: string;
+  joinedAt?: string;
+}
+
 export interface Farm {
   id: string;
+  ownerId?: string;
   name: string;
   location: string;
   area: number; // in acres
@@ -241,6 +253,7 @@ export interface FarmCreateInput {
   latitude?: number;
   longitude?: number;
   numberOfZones: number;
+  ownerId?: string;
 }
 
 export interface ZoneInput {

@@ -1,16 +1,20 @@
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
-import { Sprout, Home, Plus, BarChart3, GitCompare, Menu, X, ChevronDown, Check, MapPin, Tractor } from 'lucide-react';
+import { Sprout, Home, Plus, BarChart3, GitCompare, Menu, X, ChevronDown, Check, MapPin, Tractor, User as UserIcon, LogOut, LogIn, Sparkles } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { useFarmContext } from '../../context/FarmContext';
+import { useAuth, DEMO_FARMERS } from '../../context/AuthContext';
 
 export default function Layout() {
   const location = useLocation();
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [farmDropdownOpen, setFarmDropdownOpen] = useState(false);
+  const [userDropdownOpen, setUserDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const userDropdownRef = useRef<HTMLDivElement>(null);
 
-  const { farms, selectedFarm, selectFarm } = useFarmContext();
+  const { user, farmerProfile, demoLogin, logout, isAuthenticated } = useAuth();
+  const { farms, selectedFarm, selectFarm, allFarms } = useFarmContext();
 
   // Extract farmId from URL if present
   const farmIdMatch = location.pathname.match(/\/farms\/([^/]+)/);
@@ -30,6 +34,9 @@ export default function Layout() {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
         setFarmDropdownOpen(false);
       }
+      if (userDropdownRef.current && !userDropdownRef.current.contains(e.target as Node)) {
+        setUserDropdownOpen(false);
+      }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
@@ -38,6 +45,7 @@ export default function Layout() {
   useEffect(() => {
     setMobileMenuOpen(false);
     setFarmDropdownOpen(false);
+    setUserDropdownOpen(false);
   }, [location.pathname]);
 
   const activeFarmId = selectedFarm?.id || (farmId !== 'create' ? farmId : undefined);
@@ -53,6 +61,19 @@ export default function Layout() {
         ]
       : []),
   ];
+
+  const handleDemoSwitch = (farmerId: string) => {
+    demoLogin(farmerId);
+    setUserDropdownOpen(false);
+    // Find first farm owned by this demo farmer
+    const farmerFarm = allFarms.find((f) => f.ownerId === farmerId);
+    if (farmerFarm) {
+      selectFarm(farmerFarm.id);
+      navigate(`/farms/${farmerFarm.id}`);
+    } else {
+      navigate('/');
+    }
+  };
 
   return (
     <div className="min-h-screen bg-stone-50">
@@ -96,7 +117,7 @@ export default function Layout() {
                   {farmDropdownOpen && (
                     <div className="absolute top-full left-0 mt-1.5 w-72 bg-white rounded-2xl shadow-xl border border-gray-200 py-2 z-[999] animate-fadeIn">
                       <div className="px-3.5 py-1.5 text-[10px] font-bold uppercase tracking-wider text-gray-400 border-b border-gray-100">
-                        Switch Active Farm
+                        {user ? `${user.name}'s Farms` : 'Your Farms'} ({farms.length})
                       </div>
                       <div className="max-h-64 overflow-y-auto py-1">
                         {farms.map((f) => {
@@ -146,27 +167,137 @@ export default function Layout() {
               )}
             </div>
 
-            {/* Desktop Nav */}
-            <nav className="hidden md:flex items-center gap-1">
-              {navItems.map((item) => {
-                const Icon = item.icon;
-                const isActive = location.pathname === item.to;
-                return (
-                  <Link
-                    key={item.to}
-                    to={item.to}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 ${
-                      isActive
-                        ? 'bg-farm-green-pale text-farm-green font-bold'
-                        : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
-                    }`}
+            {/* Desktop Nav + Farmer Profile Badge */}
+            <div className="hidden md:flex items-center gap-3">
+              <nav className="flex items-center gap-1">
+                {navItems.map((item) => {
+                  const Icon = item.icon;
+                  const isActive = location.pathname === item.to;
+                  return (
+                    <Link
+                      key={item.to}
+                      to={item.to}
+                      className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-sm font-medium transition-all duration-200 ${
+                        isActive
+                          ? 'bg-farm-green-pale text-farm-green font-bold'
+                          : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                      }`}
+                    >
+                      <Icon className="w-4 h-4" />
+                      {item.label}
+                    </Link>
+                  );
+                })}
+              </nav>
+
+              <div className="h-6 w-px bg-gray-200 mx-1" />
+
+              {/* FARMER ACCOUNT DROPDOWN */}
+              {isAuthenticated && user ? (
+                <div className="relative" ref={userDropdownRef}>
+                  <button
+                    type="button"
+                    onClick={() => setUserDropdownOpen(!userDropdownOpen)}
+                    className="flex items-center gap-2.5 px-3 py-1.5 rounded-xl border border-gray-200 hover:border-farm-green/50 bg-stone-50 hover:bg-stone-100 transition-all text-left shadow-xs cursor-pointer"
                   >
-                    <Icon className="w-4 h-4" />
-                    {item.label}
-                  </Link>
-                );
-              })}
-            </nav>
+                    <div className="w-7 h-7 rounded-lg bg-farm-green-pale flex items-center justify-center text-sm font-bold text-farm-green">
+                      {farmerProfile?.avatarEmoji || user.name.charAt(0)}
+                    </div>
+                    <div className="text-left">
+                      <div className="text-xs font-bold text-gray-900 truncate max-w-[110px]">
+                        {user.name}
+                      </div>
+                      <div className="text-[10px] text-gray-500 truncate max-w-[110px]">
+                        {farms.length} farm{farms.length !== 1 ? 's' : ''}
+                      </div>
+                    </div>
+                    <ChevronDown className={`w-3.5 h-3.5 text-gray-400 transition-transform ${userDropdownOpen ? 'rotate-180' : ''}`} />
+                  </button>
+
+                  {/* Dropdown Menu */}
+                  {userDropdownOpen && (
+                    <div className="absolute top-full right-0 mt-1.5 w-72 bg-white rounded-2xl shadow-xl border border-gray-200 py-2 z-[999] animate-fadeIn">
+                      {/* Current Farmer Info */}
+                      <div className="px-4 py-2.5 border-b border-gray-100">
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-9 h-9 rounded-xl bg-farm-green-pale flex items-center justify-center text-lg">
+                            {farmerProfile?.avatarEmoji || '🧑‍🌾'}
+                          </div>
+                          <div className="min-w-0">
+                            <div className="text-xs font-bold text-gray-900 truncate">{user.name}</div>
+                            <div className="text-[11px] text-gray-500 truncate">{user.email}</div>
+                            {user.location && (
+                              <div className="text-[10px] text-gray-400 truncate flex items-center gap-1 mt-0.5">
+                                <MapPin className="w-2.5 h-2.5" /> {user.location}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* 1-Click Demo Profiles */}
+                      <div className="px-3.5 py-1.5 text-[10px] font-bold uppercase tracking-wider text-gray-400">
+                        Switch Demo Farmer
+                      </div>
+                      <div className="space-y-0.5 px-2">
+                        {DEMO_FARMERS.map((farmer) => {
+                          const isCurrent = user.id === farmer.id;
+                          return (
+                            <button
+                              key={farmer.id}
+                              type="button"
+                              onClick={() => handleDemoSwitch(farmer.id)}
+                              className={`w-full px-2.5 py-1.5 rounded-lg text-left text-xs flex items-center justify-between transition-colors cursor-pointer ${
+                                isCurrent
+                                  ? 'bg-farm-green-pale text-farm-green font-bold'
+                                  : 'hover:bg-gray-50 text-gray-700'
+                              }`}
+                            >
+                              <div className="flex items-center gap-2 truncate">
+                                <span>{farmer.avatarEmoji}</span>
+                                <span className="truncate">{farmer.name}</span>
+                              </div>
+                              {isCurrent && <Check className="w-3.5 h-3.5 text-farm-green flex-shrink-0" />}
+                            </button>
+                          );
+                        })}
+                      </div>
+
+                      {/* Actions */}
+                      <div className="border-t border-gray-100 mt-2 pt-1.5 px-2 space-y-1">
+                        <Link
+                          to="/login"
+                          onClick={() => setUserDropdownOpen(false)}
+                          className="w-full flex items-center gap-2 px-2.5 py-1.5 text-xs text-gray-700 hover:bg-stone-50 rounded-lg transition-colors"
+                        >
+                          <LogIn className="w-3.5 h-3.5 text-gray-400" />
+                          Sign in / Register Another Farmer
+                        </Link>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            logout();
+                            setUserDropdownOpen(false);
+                            navigate('/login');
+                          }}
+                          className="w-full flex items-center gap-2 px-2.5 py-1.5 text-xs text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
+                        >
+                          <LogOut className="w-3.5 h-3.5" />
+                          Sign Out
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <Link
+                  to="/login"
+                  className="flex items-center gap-1.5 bg-farm-green hover:bg-farm-green-dark text-white px-3.5 py-2 rounded-xl text-xs font-bold shadow-xs transition-all"
+                >
+                  <LogIn className="w-3.5 h-3.5" /> Sign In
+                </Link>
+              )}
+            </div>
 
             {/* Mobile menu button */}
             <button
@@ -181,7 +312,26 @@ export default function Layout() {
         {/* Mobile Nav */}
         {mobileMenuOpen && (
           <div className="md:hidden border-t border-gray-100 bg-white">
-            <div className="px-4 py-3 space-y-1">
+            {/* Farmer badge on mobile */}
+            {user && (
+              <div className="p-3 mx-4 my-2 rounded-xl bg-stone-50 border border-gray-200 flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <div className="text-xl">{farmerProfile?.avatarEmoji || '🧑‍🌾'}</div>
+                  <div>
+                    <div className="text-xs font-bold text-gray-900">{user.name}</div>
+                    <div className="text-[10px] text-gray-500">{farms.length} farm{farms.length !== 1 ? 's' : ''} • {user.location}</div>
+                  </div>
+                </div>
+                <Link
+                  to="/login"
+                  className="text-xs text-farm-green font-bold hover:underline"
+                >
+                  Switch
+                </Link>
+              </div>
+            )}
+
+            <div className="px-4 py-2 space-y-1">
               {navItems.map((item) => {
                 const Icon = item.icon;
                 const isActive = location.pathname === item.to;
@@ -189,7 +339,7 @@ export default function Layout() {
                   <Link
                     key={item.to}
                     to={item.to}
-                    className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${
+                    className={`flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-all ${
                       isActive
                         ? 'bg-farm-green-pale text-farm-green'
                         : 'text-gray-600 hover:bg-gray-50'
@@ -200,6 +350,14 @@ export default function Layout() {
                   </Link>
                 );
               })}
+              {!user && (
+                <Link
+                  to="/login"
+                  className="flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-bold text-farm-green bg-farm-green-pale/50"
+                >
+                  <LogIn className="w-4 h-4" /> Sign In / Register
+                </Link>
+              )}
             </div>
           </div>
         )}
