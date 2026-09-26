@@ -92,6 +92,52 @@ def check_firestore_connection() -> dict[str, Any]:
         }
 
 
+def _sanitize_for_firestore(data: Any) -> Any:
+    """Recursively converts nested lists-of-lists or non-standard structures to Firestore-supported formats."""
+    if isinstance(data, dict):
+        sanitized = {}
+        for k, v in data.items():
+            if k == "boundaryGeoJson" and isinstance(v, dict):
+                # Coordinates in GeoJSON polygon are list of lists of coordinate pairs [[[lng, lat], ...]]
+                # Firestore rejects lists directly containing other lists. Store as JSON string or flattened structure.
+                import json
+                sanitized[k] = json.dumps(v)
+            elif k == "boundary" and isinstance(v, list) and v and isinstance(v[0], (list, tuple)):
+                # Store boundary as list of dicts: [{"lat": p[0], "lng": p[1]}, ...]
+                # to prevent Firestore nested list error
+                sanitized[k] = [{"lat": float(p[0]), "lng": float(p[1])} for p in v]
+            else:
+                sanitized[k] = _sanitize_for_firestore(v)
+        return sanitized
+    elif isinstance(data, list):
+        # If list contains another list, convert sub-lists to dicts or strings
+        cleaned = []
+        for item in data:
+            if isinstance(item, (list, tuple)):
+                cleaned.append([float(x) if isinstance(x, (int, float)) else str(x) for x in item])
+            else:
+                cleaned.append(_sanitize_for_firestore(item))
+        return cleaned
+    return data
+
+
+def _desanitize_from_firestore(data: dict[str, Any] | None) -> dict[str, Any] | None:
+    if not data or not isinstance(data, dict):
+        return data
+    doc = dict(data)
+    if "boundaryGeoJson" in doc and isinstance(doc["boundaryGeoJson"], str):
+        import json
+        try:
+            doc["boundaryGeoJson"] = json.loads(doc["boundaryGeoJson"])
+        except Exception:
+            pass
+    if "boundary" in doc and isinstance(doc["boundary"], list):
+        # Convert [{'lat': 19.12, 'lng': 72.90}, ...] back to [[19.12, 72.90], ...]
+        if doc["boundary"] and isinstance(doc["boundary"][0], dict) and "lat" in doc["boundary"][0]:
+            doc["boundary"] = [[float(p["lat"]), float(p["lng"])] for p in doc["boundary"]]
+    return doc
+
+
 class FirestoreRepository:
     """Production-grade Firestore Repository adapter."""
 
@@ -100,21 +146,22 @@ class FirestoreRepository:
 
     def _set(self, collection_name: str, document_id: str, document: dict[str, Any]) -> None:
         try:
-            self.db.collection(collection_name).document(document_id).set(document)
+            sanitized = _sanitize_for_firestore(document)
+            self.db.collection(collection_name).document(document_id).set(sanitized)
         except Exception as exc:
             raise FirebaseStorageError(f"Firestore set error on {collection_name}/{document_id}: {exc}") from exc
 
     def _get(self, collection_name: str, document_id: str) -> dict[str, Any] | None:
         try:
             snapshot = self.db.collection(collection_name).document(document_id).get()
-            return snapshot.to_dict() if snapshot.exists else None
+            return _desanitize_from_firestore(snapshot.to_dict()) if snapshot.exists else None
         except Exception as exc:
             raise FirebaseStorageError(f"Firestore get error on {collection_name}/{document_id}: {exc}") from exc
 
     def _list_by_field(self, collection_name: str, field_name: str, field_value: str) -> list[dict[str, Any]]:
         try:
             query = self.db.collection(collection_name).where(field_name, "==", field_value)
-            return [doc.to_dict() for doc in query.stream()]
+            return [_desanitize_from_firestore(doc.to_dict()) for doc in query.stream()]
         except Exception as exc:
             raise FirebaseStorageError(f"Firestore query error on {collection_name}: {exc}") from exc
 
@@ -143,7 +190,8 @@ class FirestoreRepository:
         self._set("farms", farm_id, farm)
         if owner_id:
             try:
-                self.db.collection("users").document(owner_id).collection("farms").document(farm_id).set(farm)
+                sanitized = _sanitize_for_firestore(farm)
+                self.db.collection("users").document(owner_id).collection("farms").document(farm_id).set(sanitized)
             except Exception:
                 pass
 
@@ -157,14 +205,14 @@ class FirestoreRepository:
             for user_doc in self.db.collection("users").stream():
                 sub = user_doc.reference.collection("farms").document(farm_id).get()
                 if sub.exists:
-                    return sub.to_dict()
+                    return _desanitize_from_firestore(sub.to_dict())
         except Exception:
             pass
         return None
 
     def list_farms(self) -> list[dict[str, Any]]:
         try:
-            return [doc.to_dict() for doc in self.db.collection("farms").stream()]
+            return [_desanitize_from_firestore(doc.to_dict()) for doc in self.db.collection("farms").stream()]
         except Exception as exc:
             raise FirebaseStorageError(f"Firestore list_farms error: {exc}") from exc
 

@@ -17,11 +17,11 @@ export default function FarmCreatePage() {
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState<FarmCreateInput>({
     name: '',
-    location: user?.location || '',
-    area: 10,
+    location: '',
+    area: 0,
     latitude: undefined,
     longitude: undefined,
-    numberOfZones: 3,
+    numberOfZones: 1,
     ownerId: user?.id,
   });
 
@@ -34,7 +34,6 @@ export default function FarmCreatePage() {
       setForm((prev) => ({
         ...prev,
         ownerId: user.id,
-        location: prev.location || user.location || '',
       }));
     }
   }, [user]);
@@ -57,11 +56,10 @@ export default function FarmCreatePage() {
   const validate = (): boolean => {
     const newErrors: Partial<Record<string, string>> = {};
     if (!form.name.trim()) newErrors.name = 'Farm name is required';
-    if (!form.location.trim()) newErrors.location = 'Location is required';
-    if (form.area <= 0) newErrors.area = 'Area must be greater than 0';
+    if (!form.location.trim()) newErrors.location = 'Select your farm location or search on the map';
+    if (form.area <= 0) newErrors.area = 'Draw your farm boundary on the map to calculate the area';
     if (form.numberOfZones < 1) newErrors.numberOfZones = 'At least 1 zone is required';
     if (form.numberOfZones > 20) newErrors.numberOfZones = 'Maximum 20 zones allowed';
-    // Boundary: 0 points is fine (optional), but 1-2 points is invalid
     if (boundaryPoints.length > 0 && boundaryPoints.length < 3) {
       newErrors.boundary = 'Please mark at least 3 points on the map to define the farm boundary.';
     }
@@ -210,37 +208,12 @@ export default function FarmCreatePage() {
                   <input
                     type="text"
                     className={`input-field pl-10 ${errors.location ? 'border-red-300 focus:ring-red-300/30 focus:border-red-400' : ''}`}
-                    placeholder="e.g., Punjab, India"
+                    placeholder="Search or select your farm location on the map below..."
                     value={form.location}
                     onChange={(e) => updateField('location', e.target.value)}
                   />
                 </div>
                 {errors.location && <p className="text-sm text-red-500 mt-1">{errors.location}</p>}
-
-                {/* Location Quick Presets */}
-                <div className="mt-2 flex flex-wrap items-center gap-1.5">
-                  <span className="text-xs text-gray-400 font-medium mr-1">Quick Select:</span>
-                  {[
-                    { name: 'Ludhiana, Punjab', lat: 30.9010, lng: 75.8573 },
-                    { name: 'Fresno, California', lat: 36.7468, lng: -119.7726 },
-                    { name: 'Ames, Iowa', lat: 42.0308, lng: -93.6319 },
-                    { name: 'Austin, Texas', lat: 30.2672, lng: -97.7431 },
-                  ].map((preset) => (
-                    <button
-                      key={preset.name}
-                      type="button"
-                      onClick={() => {
-                        updateField('location', preset.name);
-                        updateField('latitude', preset.lat);
-                        updateField('longitude', preset.lng);
-                        setMapCenter([preset.lat, preset.lng]);
-                      }}
-                      className="text-xs px-2.5 py-1 rounded-lg bg-stone-100 hover:bg-emerald-50 hover:text-farm-green text-gray-600 transition-colors border border-gray-200"
-                    >
-                      {preset.name}
-                    </button>
-                  ))}
-                </div>
               </div>
             </div>
           </div>
@@ -249,32 +222,33 @@ export default function FarmCreatePage() {
           <div className="card">
             <h2 className="section-title flex items-center gap-2 mb-4">
               <Ruler className="w-4 h-4 text-farm-green" />
-              Size & Layout
+              Calculated Area & Layout
             </h2>
             <div className="grid sm:grid-cols-2 gap-4">
               <div>
-                <label className="label">Farm Area (acres) *</label>
-                <input
-                  type="number"
-                  className={`input-field ${errors.area ? 'border-red-300 focus:ring-red-300/30 focus:border-red-400' : ''}`}
-                  placeholder="10"
-                  min="0.1"
-                  step="0.1"
-                  value={form.area}
-                  onChange={(e) => updateField('area', parseFloat(e.target.value) || 0)}
-                />
+                <label className="label">Farm Area (Calculated from Boundary)</label>
+                <div className="p-3 bg-stone-50 border border-gray-200 rounded-xl">
+                  {form.area > 0 ? (
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-xl font-extrabold text-farm-green">{form.area.toFixed(2)} acres</span>
+                      <span className="text-xs text-gray-500">({(form.area / 2.47105).toFixed(2)} hectares)</span>
+                    </div>
+                  ) : (
+                    <span className="text-sm text-gray-400 italic">Draw boundary on map to calculate area</span>
+                  )}
+                </div>
                 {errors.area && <p className="text-sm text-red-500 mt-1">{errors.area}</p>}
               </div>
 
               <div>
                 <label className="label flex items-center gap-2">
                   <Grid3x3 className="w-3.5 h-3.5 text-gray-400" />
-                  Number of Zones *
+                  Initial Field Zones *
                 </label>
                 <input
                   type="number"
                   className={`input-field ${errors.numberOfZones ? 'border-red-300 focus:ring-red-300/30 focus:border-red-400' : ''}`}
-                  placeholder="3"
+                  placeholder="1"
                   min="1"
                   max="20"
                   value={form.numberOfZones}

@@ -48,24 +48,12 @@ function getInitialCoordinates(farm: Farm): [number, number] {
   if (farm.latitude !== undefined && farm.longitude !== undefined && farm.latitude !== 0) {
     return [farm.latitude, farm.longitude];
   }
-  const loc = (farm.location || '').toLowerCase();
-  if (loc.includes('punjab') || loc.includes('ludhiana') || loc.includes('india')) {
-    return [30.9010, 75.8573];
+  if (farm.boundary && farm.boundary.length >= 3) {
+    const lat = farm.boundary.reduce((s, p) => s + p[0], 0) / farm.boundary.length;
+    const lng = farm.boundary.reduce((s, p) => s + p[1], 0) / farm.boundary.length;
+    return [lat, lng];
   }
-  if (loc.includes('california') || loc.includes('fresno') || loc.includes('central valley')) {
-    return [36.7468, -119.7726];
-  }
-  if (loc.includes('iowa') || loc.includes('ames')) {
-    return [42.0308, -93.6319];
-  }
-  if (loc.includes('texas')) {
-    return [31.9686, -99.9018];
-  }
-  if (loc.includes('kansas')) {
-    return [39.0119, -98.4842];
-  }
-  // Default fertile agriculture coordinates (Punjab plain)
-  return [30.9010, 75.8573];
+  return [20.5937, 78.9629];
 }
 
 export default function FarmBuilderPage() {

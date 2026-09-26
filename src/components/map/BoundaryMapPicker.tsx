@@ -135,14 +135,13 @@ export default function BoundaryMapPicker({
   const [isSearching, setIsSearching] = useState(false);
   const [isReverseGeocoding, setIsReverseGeocoding] = useState(false);
 
-  // Selected farm location center point
-  const defaultCenter: [number, number] = initialCenter || [30.9010, 75.8573];
-  const [centerPoint, setCenterPoint] = useState<[number, number]>(defaultCenter);
+  // Selected farm location center point (starts undefined if not provided)
+  const [centerPoint, setCenterPoint] = useState<[number, number] | null>(initialCenter || null);
   const [flyTarget, setFlyTarget] = useState<[number, number] | undefined>(initialCenter);
 
-  // Manual Coordinate Inputs
-  const [latInput, setLatInput] = useState<string>(defaultCenter[0].toFixed(5));
-  const [lngInput, setLngInput] = useState<string>(defaultCenter[1].toFixed(5));
+  // Manual Coordinate Inputs (empty until selected or entered)
+  const [latInput, setLatInput] = useState<string>(initialCenter ? initialCenter[0].toFixed(5) : '');
+  const [lngInput, setLngInput] = useState<string>(initialCenter ? initialCenter[1].toFixed(5) : '');
 
   // Human readable location identifier
   const [locationDetails, setLocationDetails] = useState<LocationDetails | null>(null);
@@ -157,9 +156,11 @@ export default function BoundaryMapPicker({
     }
   }, [locationQuery]);
 
-  // Initial reverse geocode on mount
+  // Initial reverse geocode only if initialCenter provided
   useEffect(() => {
-    handlePerformReverseGeocode(centerPoint[0], centerPoint[1]);
+    if (centerPoint) {
+      handlePerformReverseGeocode(centerPoint[0], centerPoint[1]);
+    }
   }, []);
 
   const handlePerformReverseGeocode = async (lat: number, lng: number) => {
@@ -283,6 +284,10 @@ export default function BoundaryMapPicker({
 
   // Quick 1-click standard field box centered on current center point
   const handleDropSimpleBox = () => {
+    if (!centerPoint) {
+      toast.error('Please search or select your farm location first.');
+      return;
+    }
     const center = centerPoint;
     const targetAcres = enteredAreaAcres > 0 ? enteredAreaAcres : 10;
     
@@ -350,7 +355,7 @@ export default function BoundaryMapPicker({
                     <Loader2 className="w-3 h-3 animate-spin" /> Identifying locality...
                   </span>
                 ) : (
-                  locationDetails?.formattedLocation || 'Selected Point on Map'
+                  locationDetails?.formattedLocation || (centerPoint ? 'Selected Point on Map' : 'Select your farm location on the map or search above')
                 )}
               </span>
               {locationDetails?.state && locationDetails?.country && (
@@ -360,9 +365,11 @@ export default function BoundaryMapPicker({
               )}
             </div>
           </div>
-          <div className="text-[11px] text-gray-500 font-mono">
-            {centerPoint[0].toFixed(4)}°N, {centerPoint[1].toFixed(4)}°E
-          </div>
+          {centerPoint && (
+            <div className="text-[11px] text-gray-500 font-mono">
+              {centerPoint[0].toFixed(4)}°N, {centerPoint[1].toFixed(4)}°E
+            </div>
+          )}
         </div>
 
         {/* Phase 10: Location Coordinates Editor (Latitude / Longitude Manual Correction) */}
@@ -446,8 +453,8 @@ export default function BoundaryMapPicker({
       {/* 3. Interactive Leaflet Map Container */}
       <div className="relative rounded-2xl overflow-hidden border-2 border-stone-300 shadow-md h-[400px]">
         <MapContainer
-          center={centerPoint}
-          zoom={15}
+          center={centerPoint || [20.5937, 78.9629]}
+          zoom={centerPoint ? 15 : 4}
           scrollWheelZoom={true}
           className="w-full h-full"
         >
@@ -468,14 +475,16 @@ export default function BoundaryMapPicker({
           <MapClickHandler onAddPoint={handleAddPoint} isDrawingMode={isDrawingMode} />
 
           {/* Farm Location Center Marker (draggable) */}
-          <Marker
-            position={centerPoint}
-            icon={centerPinIcon}
-            draggable={true}
-            eventHandlers={{
-              dragend: handleCenterMarkerDrag,
-            }}
-          />
+          {centerPoint && (
+            <Marker
+              position={centerPoint}
+              icon={centerPinIcon}
+              draggable={true}
+              eventHandlers={{
+                dragend: handleCenterMarkerDrag,
+              }}
+            />
+          )}
 
           {/* Farm Boundary Polygon */}
           {points.length >= 3 && (

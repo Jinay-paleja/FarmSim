@@ -183,13 +183,22 @@ export default function Layout() {
               <nav className="flex items-center gap-1">
                 {currentNavItems.map((item) => {
                   const Icon = item.icon;
-                  const isActive = location.pathname === item.to;
+                  const isItemActive = (() => {
+                    const path = location.pathname;
+                    if (item.label === 'Dashboard') return path === '/dashboard';
+                    if (item.label === 'My Farms') return path === '/farms' || path === '/farms/create';
+                    if (item.label === 'Farm Map') return path.includes('/builder');
+                    if (item.label === 'Simulations') return path.includes('/scenario') || path.includes('/simulation') || path.includes('/results');
+                    if (item.label === 'Analytics') return path.match(/^\/farms\/[^/]+$/) !== null;
+                    if (item.label === 'Compare') return path.includes('/compare') || path.includes('/comparison');
+                    return path === item.to;
+                  })();
                   return (
                     <Link
                       key={item.to}
                       to={item.to}
                       className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-sm font-medium transition-all duration-200 ${
-                        isActive
+                        isItemActive
                           ? 'bg-farm-green-pale text-farm-green font-bold'
                           : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
                       }`}
@@ -342,13 +351,22 @@ export default function Layout() {
             <div className="space-y-1">
               {currentNavItems.map((item) => {
                 const Icon = item.icon;
-                const isActive = location.pathname === item.to;
+                const isItemActive = (() => {
+                  const path = location.pathname;
+                  if (item.label === 'Dashboard') return path === '/dashboard';
+                  if (item.label === 'My Farms') return path === '/farms' || path === '/farms/create';
+                  if (item.label === 'Farm Map') return path.includes('/builder');
+                  if (item.label === 'Simulations') return path.includes('/scenario') || path.includes('/simulation') || path.includes('/results');
+                  if (item.label === 'Analytics') return path.match(/^\/farms\/[^/]+$/) !== null;
+                  if (item.label === 'Compare') return path.includes('/compare') || path.includes('/comparison');
+                  return path === item.to;
+                })();
                 return (
                   <Link
                     key={item.to}
                     to={item.to}
                     className={`flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-all ${
-                      isActive
+                      isItemActive
                         ? 'bg-farm-green-pale text-farm-green font-bold'
                         : 'text-gray-600 hover:bg-gray-50'
                     }`}
