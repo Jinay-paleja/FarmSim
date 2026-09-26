@@ -14,6 +14,7 @@ import ErrorDisplay from '../components/shared/ErrorDisplay';
 import MetricCard from '../components/shared/MetricCard';
 import StatusBadge from '../components/shared/StatusBadge';
 import DigitalFarmMap, { BaseMapLayer, FieldViewMode } from '../components/map/DigitalFarmMap';
+import VirtualFarmWorkspace from '../components/virtual/VirtualFarmWorkspace';
 import WeatherCard from '../components/weather/WeatherCard';
 import FarmIntelligencePanel from '../components/intelligence/FarmIntelligencePanel';
 import AIRiskSuggesterCard from '../components/intelligence/AIRiskSuggesterCard';
@@ -60,6 +61,9 @@ export default function FarmDashboardPage() {
   const [loading, setLoading] = useState(true);
   const [simulating, setSimulating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // View toggle: Virtual Farm Workspace vs Satellite Map
+  const [dashboardViewMode, setDashboardViewMode] = useState<'virtual' | 'satellite'>('virtual');
 
   // Digital Map State
   const [activeLayer, setActiveLayer] = useState<BaseMapLayer>('satellite');
@@ -492,7 +496,7 @@ export default function FarmDashboardPage() {
       />
 
       {/* ============================================================ */}
-      {/* 4. DIGITAL FARM MAP (Only active farm displayed) */}
+      {/* 4. DIGITAL FARM CANVAS / MAP (Virtual Workspace default) */}
       {/* ============================================================ */}
       <div className="card p-0 overflow-hidden border border-gray-200 dark:border-gray-800 shadow-md">
         <div className="p-4 border-b border-gray-200 dark:border-gray-800 flex flex-col md:flex-row md:items-center justify-between gap-3 bg-gray-50/50 dark:bg-gray-800/40">
@@ -500,15 +504,39 @@ export default function FarmDashboardPage() {
             <div className="flex items-center gap-2">
               <Compass className="w-5 h-5 text-farm-green" />
               <h2 className="text-base font-bold text-gray-900 dark:text-gray-100">
-                Interactive Digital Map: {farm.name}
+                {dashboardViewMode === 'virtual' ? 'Virtual Farm Workspace' : 'Interactive Geospatial Map'}: {farm.name}
               </h2>
             </div>
             <p className="text-xs text-gray-500 mt-0.5">
-              Only {farm.name} is active on the map. Click any plot to inspect field-level diagnostics.
+              {dashboardViewMode === 'virtual'
+                ? 'Visual digital representation of farm acreage, plots, and crop distribution.'
+                : `Geographic map view for ${farm.name}. Click any plot to inspect field-level diagnostics.`}
             </p>
           </div>
 
           <div className="flex items-center gap-2 flex-wrap">
+            {/* Toggle between Virtual Farm Workspace and Satellite Map */}
+            <div className="flex items-center bg-white dark:bg-gray-800 rounded-lg p-0.5 border border-gray-200 dark:border-gray-700 text-xs">
+              <button
+                type="button"
+                onClick={() => setDashboardViewMode('virtual')}
+                className={`px-3 py-1 rounded-md font-semibold transition-all ${
+                  dashboardViewMode === 'virtual' ? 'bg-farm-green text-white shadow-xs' : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                🌱 Virtual Farm
+              </button>
+              <button
+                type="button"
+                onClick={() => setDashboardViewMode('satellite')}
+                className={`px-3 py-1 rounded-md font-semibold transition-all ${
+                  dashboardViewMode === 'satellite' ? 'bg-farm-green text-white shadow-xs' : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                🛰️ Satellite View
+              </button>
+            </div>
+
             {/* Field deselection pill if a field is active */}
             {selectedZoneIndex !== null && (
               <button
@@ -521,85 +549,116 @@ export default function FarmDashboardPage() {
               </button>
             )}
 
-            {/* Base tile layer switcher */}
-            <div className="flex items-center bg-white dark:bg-gray-800 rounded-lg p-0.5 border border-gray-200 dark:border-gray-700 text-xs">
-              <button
-                onClick={() => setActiveLayer('satellite')}
-                className={`px-2.5 py-1 rounded-md font-medium transition-all ${
-                  activeLayer === 'satellite' ? 'bg-farm-green text-white shadow-xs' : 'text-gray-600 hover:text-gray-900'
-                }`}
-              >
-                🛰️ Satellite
-              </button>
-              <button
-                onClick={() => setActiveLayer('streets')}
-                className={`px-2.5 py-1 rounded-md font-medium transition-all ${
-                  activeLayer === 'streets' ? 'bg-farm-green text-white shadow-xs' : 'text-gray-600 hover:text-gray-900'
-                }`}
-              >
-                🗺️ Streets
-              </button>
-            </div>
+            {dashboardViewMode === 'satellite' && (
+              <>
+                {/* Base tile layer switcher */}
+                <div className="flex items-center bg-white dark:bg-gray-800 rounded-lg p-0.5 border border-gray-200 dark:border-gray-700 text-xs">
+                  <button
+                    onClick={() => setActiveLayer('satellite')}
+                    className={`px-2.5 py-1 rounded-md font-medium transition-all ${
+                      activeLayer === 'satellite' ? 'bg-farm-green text-white shadow-xs' : 'text-gray-600 hover:text-gray-900'
+                    }`}
+                  >
+                    🛰️ Satellite
+                  </button>
+                  <button
+                    onClick={() => setActiveLayer('streets')}
+                    className={`px-2.5 py-1 rounded-md font-medium transition-all ${
+                      activeLayer === 'streets' ? 'bg-farm-green text-white shadow-xs' : 'text-gray-600 hover:text-gray-900'
+                    }`}
+                  >
+                    🗺️ Streets
+                  </button>
+                </div>
 
-            {/* View mode switcher */}
-            <div className="flex items-center bg-white dark:bg-gray-800 rounded-lg p-0.5 border border-gray-200 dark:border-gray-700 text-xs">
-              <button
-                onClick={() => setViewMode('health')}
-                className={`px-2.5 py-1 rounded-md font-medium transition-all ${
-                  viewMode === 'health' ? 'bg-emerald-700 text-white shadow-xs font-semibold' : 'text-gray-600 hover:text-gray-900'
-                }`}
-              >
-                ❤️ Health
-              </button>
-              <button
-                onClick={() => setViewMode('crops')}
-                className={`px-2.5 py-1 rounded-md font-medium transition-all ${
-                  viewMode === 'crops' ? 'bg-emerald-700 text-white shadow-xs font-semibold' : 'text-gray-600 hover:text-gray-900'
-                }`}
-              >
-                🌿 Crops
-              </button>
-              <button
-                onClick={() => setViewMode('moisture')}
-                className={`px-2.5 py-1 rounded-md font-medium transition-all ${
-                  viewMode === 'moisture' ? 'bg-emerald-700 text-white shadow-xs font-semibold' : 'text-gray-600 hover:text-gray-900'
-                }`}
-              >
-                💧 Moisture
-              </button>
-            </div>
+                {/* View mode switcher */}
+                <div className="flex items-center bg-white dark:bg-gray-800 rounded-lg p-0.5 border border-gray-200 dark:border-gray-700 text-xs">
+                  <button
+                    onClick={() => setViewMode('health')}
+                    className={`px-2.5 py-1 rounded-md font-medium transition-all ${
+                      viewMode === 'health' ? 'bg-emerald-700 text-white shadow-xs font-semibold' : 'text-gray-600 hover:text-gray-900'
+                    }`}
+                  >
+                    ❤️ Health
+                  </button>
+                  <button
+                    onClick={() => setViewMode('crops')}
+                    className={`px-2.5 py-1 rounded-md font-medium transition-all ${
+                      viewMode === 'crops' ? 'bg-emerald-700 text-white shadow-xs font-semibold' : 'text-gray-600 hover:text-gray-900'
+                    }`}
+                  >
+                    🌿 Crops
+                  </button>
+                  <button
+                    onClick={() => setViewMode('moisture')}
+                    className={`px-2.5 py-1 rounded-md font-medium transition-all ${
+                      viewMode === 'moisture' ? 'bg-emerald-700 text-white shadow-xs font-semibold' : 'text-gray-600 hover:text-gray-900'
+                    }`}
+                  >
+                    💧 Moisture
+                  </button>
+                </div>
+              </>
+            )}
 
             <Link
               to={`/farms/${farm.id}/builder`}
               className="text-xs text-blue-600 hover:text-blue-800 font-semibold px-2 py-1 rounded hover:bg-blue-50 flex items-center gap-1 transition-colors"
             >
-              <Edit3 className="w-3.5 h-3.5" /> Full Map Editor
+              <Edit3 className="w-3.5 h-3.5" /> Full Workspace Editor
             </Link>
           </div>
         </div>
 
-        {/* Map canvas */}
-        <div className="h-[480px] w-full relative">
-          <DigitalFarmMap
-            farmName={farm.name}
-            center={mapCenter}
-            farmBoundary={farm.boundary}
-            zones={mapZoneInputs}
-            selectedZoneIndex={selectedZoneIndex}
-            drawingTool="none"
-            drawingTarget="field"
-            activeLayer={activeLayer}
-            viewMode={viewMode}
-            isEditingVertices={false}
-            liveWeather={weather}
-            onSelectZone={(idx) => handleFieldSelect(idx)}
-            onUpdateFarmBoundary={() => {}}
-            onAddFieldWithGeometry={() => {}}
-            onUpdateZoneBoundary={() => {}}
-            onCancelDrawing={() => {}}
-            onValidationWarning={() => {}}
-          />
-        </div>
+        {/* Canvas or Map display */}
+        {dashboardViewMode === 'virtual' ? (
+          <div className="p-6">
+            <VirtualFarmWorkspace
+              farmName={farm.name}
+              totalArea={farm.area || 10}
+              zones={mapZoneInputs}
+              onZonesChange={async (updatedZones) => {
+                // Update local and remote
+                const updatedFarm: Farm = {
+                  ...farm,
+                  zones: updatedZones as Zone[],
+                };
+                setFarm(updatedFarm);
+                updateFarmInState(updatedFarm);
+                try {
+                  await farmApi.update(farm.id, updatedFarm);
+                  toast.success('Farm zones updated');
+                } catch {
+                  toast.error('Failed to save updated zones');
+                }
+              }}
+              selectedZoneIndex={selectedZoneIndex}
+              onSelectZone={(idx) => handleFieldSelect(idx)}
+            />
+          </div>
+        ) : (
+          <div className="h-[480px] w-full relative">
+            <DigitalFarmMap
+              farmName={farm.name}
+              center={mapCenter}
+              farmBoundary={farm.boundary}
+              zones={mapZoneInputs}
+              selectedZoneIndex={selectedZoneIndex}
+              drawingTool="none"
+              drawingTarget="field"
+              activeLayer={activeLayer}
+              viewMode={viewMode}
+              isEditingVertices={false}
+              liveWeather={weather}
+              onSelectZone={(idx) => handleFieldSelect(idx)}
+              onUpdateFarmBoundary={() => {}}
+              onAddFieldWithGeometry={() => {}}
+              onUpdateZoneBoundary={() => {}}
+              onCancelDrawing={() => {}}
+              onValidationWarning={() => {}}
+            />
+          </div>
+        )}
       </div>
 
       {/* ============================================================ */}

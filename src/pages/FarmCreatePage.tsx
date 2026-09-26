@@ -1,67 +1,71 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { MapPin, Ruler, Grid3x3, Sprout, ArrowRight, Loader2, Sparkles, User as UserIcon, LogIn, Shield } from 'lucide-react';
+import { Ruler, Sprout, ArrowRight, Loader2, Sparkles, User as UserIcon, LogIn, Shield, CheckCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { farmApi } from '../services/api';
-import { isMockEnabled, createMockFarm } from '../services/mockData';
+import { farmApi, zoneApi } from '../services/api';
 import { useFarmContext } from '../context/FarmContext';
 import { useAuth } from '../context/AuthContext';
-import { calculatePolygonArea } from '../services/mapGeometry';
-import BoundaryMapPicker from '../components/map/BoundaryMapPicker';
-import type { FarmCreateInput, Farm } from '../types';
+import VirtualFarmWorkspace from '../components/virtual/VirtualFarmWorkspace';
+import type { FarmCreateInput, ZoneInput } from '../types';
 
 export default function FarmCreatePage() {
   const navigate = useNavigate();
   const { user, isAuthenticated } = useAuth();
   const { refreshFarms, selectFarm } = useFarmContext();
   const [loading, setLoading] = useState(false);
-  const [form, setForm] = useState<FarmCreateInput>({
-    name: '',
-    location: '',
-    area: 0,
-    latitude: undefined,
-    longitude: undefined,
-    numberOfZones: 1,
-    ownerId: user?.id,
-  });
 
-  // Boundary drawing state
-  const [boundaryPoints, setBoundaryPoints] = useState<[number, number][]>([]);
-  const [mapCenter, setMapCenter] = useState<[number, number] | undefined>(undefined);
-
-  useEffect(() => {
-    if (user) {
-      setForm((prev) => ({
-        ...prev,
-        ownerId: user.id,
-      }));
+  // Form State
+  const [farmName, setFarmName] = useState('');
+  const [totalArea, setTotalArea] = useState<number>(10);
+  const [zones, setZones] = useState<ZoneInput[]>([
+    {
+      name: 'Zone 1 - Main Field',
+      area: 6,
+      crop: 'Wheat',
+      soilType: 'Loamy',
+      growthStage: 'Vegetative',
+      irrigationMethod: 'Drip',
+      soilMoisture: 45,
+      temperature: 24,
+      humidity: 60,
+      rainfall: 15,
+      nitrogen: 60,
+      phosphorus: 40,
+      potassium: 40,
+      healthScore: 85,
+      diseaseRisk: 15,
+    },
+    {
+      name: 'Zone 2 - Secondary Field',
+      area: 4,
+      crop: 'Rice',
+      soilType: 'Alluvial',
+      growthStage: 'Seedling',
+      irrigationMethod: 'Flood',
+      soilMoisture: 55,
+      temperature: 24,
+      humidity: 60,
+      rainfall: 15,
+      nitrogen: 55,
+      phosphorus: 35,
+      potassium: 35,
+      healthScore: 80,
+      diseaseRisk: 12,
     }
-  }, [user]);
-
+  ]);
+  const [selectedZoneIndex, setSelectedZoneIndex] = useState<number | null>(0);
   const [errors, setErrors] = useState<Partial<Record<string, string>>>({});
 
-  // Mapped area calculation
-  const mappedArea = useMemo(() => {
-    if (boundaryPoints.length < 3) return null;
-    return calculatePolygonArea(boundaryPoints);
-  }, [boundaryPoints]);
-
-  // Auto-sync form.area from mapped polygon calculation
-  useEffect(() => {
-    if (mappedArea && mappedArea.acres > 0) {
-      setForm((prev) => ({ ...prev, area: mappedArea.acres }));
-    }
-  }, [mappedArea]);
+  const allocatedArea = zones.reduce((sum, z) => sum + (Number(z.area) || 0), 0);
+  const remainingArea = Math.max(0, Math.round((totalArea - allocatedArea) * 100) / 100);
 
   const validate = (): boolean => {
     const newErrors: Partial<Record<string, string>> = {};
-    if (!form.name.trim()) newErrors.name = 'Farm name is required';
-    if (!form.location.trim()) newErrors.location = 'Select your farm location or search on the map';
-    if (form.area <= 0) newErrors.area = 'Draw your farm boundary on the map to calculate the area';
-    if (form.numberOfZones < 1) newErrors.numberOfZones = 'At least 1 zone is required';
-    if (form.numberOfZones > 20) newErrors.numberOfZones = 'Maximum 20 zones allowed';
-    if (boundaryPoints.length > 0 && boundaryPoints.length < 3) {
-      newErrors.boundary = 'Please mark at least 3 points on the map to define the farm boundary.';
+    if (!farmName.trim()) newErrors.farmName = 'Farm name is required';
+    if (totalArea <= 0) newErrors.totalArea = 'Total farm area must be greater than 0 acres';
+    if (zones.length === 0) newErrors.zones = 'At least 1 zone must be added to your farm';
+    if (allocatedArea > totalArea + 0.001) {
+      newErrors.zones = `Allocated zone area (${allocatedArea.toFixed(1)} acres) exceeds total farm area (${totalArea} acres)`;
     }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -69,64 +73,46 @@ export default function FarmCreatePage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!validate()) return;
+    if (!validate()) {
+      if (errors.zones) toast.error(errors.zones);
+      return;
+    }
 
     setLoading(true);
 
-    // Build boundary data
-    const hasBoundary = boundaryPoints.length >= 3;
-    const centerLat = hasBoundary
-      ? boundaryPoints.reduce((s, p) => s + p[0], 0) / boundaryPoints.length
-      : form.latitude;
-    const centerLng = hasBoundary
-      ? boundaryPoints.reduce((s, p) => s + p[1], 0) / boundaryPoints.length
-      : form.longitude;
-
     const payload: FarmCreateInput = {
-      ...form,
+      name: farmName.trim(),
+      location: 'Virtual Farm Workspace',
+      area: totalArea,
+      total_area: totalArea,
+      numberOfZones: zones.length,
       ownerId: user?.id || '',
-      latitude: centerLat,
-      longitude: centerLng,
-      boundary: hasBoundary ? boundaryPoints : undefined,
-      boundary_points: hasBoundary
-        ? boundaryPoints.map(([lat, lng]) => ({ latitude: lat, longitude: lng }))
-        : undefined,
-      boundaryGeoJson: hasBoundary
-        ? {
-            type: 'Polygon' as const,
-            coordinates: [
-              [
-                ...boundaryPoints.map(([lat, lng]) => [lng, lat] as [number, number]),
-                [boundaryPoints[0][1], boundaryPoints[0][0]] as [number, number],
-              ],
-            ],
-          }
-        : undefined,
-      mapped_area: hasBoundary && mappedArea ? mappedArea.acres : undefined,
-      total_area: form.area,
     };
 
     try {
+      // 1. Create the farm in Firestore
       const farm = await farmApi.create(payload);
       const createdFarmId = farm.id || farm.farmId;
       if (!createdFarmId) {
         throw new Error('Farm creation did not return a valid farm ID.');
       }
+
+      // 2. Persist the configured virtual zones
+      for (const zone of zones) {
+        await zoneApi.create(createdFarmId, {
+          ...zone,
+          area: Number(zone.area),
+        });
+      }
+
       await refreshFarms();
       selectFarm(createdFarmId);
-      toast.success('Farm created successfully! Opening Farm Map...');
-      navigate(`/farms/${createdFarmId}/builder`);
+      toast.success('Virtual Farm created successfully! Opening Farm Dashboard...');
+      navigate(`/farms/${createdFarmId}`);
     } catch (err: any) {
       toast.error(err?.message || 'Failed to create farm. Please verify details and try again.');
     } finally {
       setLoading(false);
-    }
-  };
-
-  const updateField = <K extends keyof FarmCreateInput>(key: K, value: FarmCreateInput[K]) => {
-    setForm((prev) => ({ ...prev, [key]: value }));
-    if (errors[key]) {
-      setErrors((prev) => ({ ...prev, [key]: undefined }));
     }
   };
 
@@ -151,7 +137,7 @@ export default function FarmCreatePage() {
             Sign In / Register
           </Link>
           <p className="text-xs text-gray-400 mt-6">
-            After signing in, you'll be redirected back to create your farm.
+            After signing in, you'll be redirected back to create your digital farm.
           </p>
         </div>
       </div>
@@ -159,18 +145,18 @@ export default function FarmCreatePage() {
   }
 
   return (
-    <div className="page-container">
-      <div className="max-w-3xl mx-auto">
+    <div className="page-container py-8">
+      <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center gap-3 mb-2">
             <div className="w-10 h-10 rounded-xl bg-farm-green-pale flex items-center justify-center">
               <Sprout className="w-5 h-5 text-farm-green" />
             </div>
-            <h1 className="page-title">Create Your Farm</h1>
+            <h1 className="page-title">Digital Farm Creator</h1>
           </div>
           <p className="text-gray-500 ml-[52px]">
-            Set up your farm details and draw the boundary on the map. You'll configure zones and crops in the next step.
+            Define your farm name, specify total acreage, and visually divide your fields into virtual zones.
           </p>
           {user && (
             <div className="ml-[52px] mt-3 inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-xs text-emerald-800">
@@ -180,176 +166,117 @@ export default function FarmCreatePage() {
           )}
         </div>
 
-        {/* Form */}
+        {/* Creation Form */}
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Farm Name */}
+          {/* Farm Setup Card */}
           <div className="card">
             <h2 className="section-title flex items-center gap-2 mb-4">
               <Sprout className="w-4 h-4 text-farm-green" />
-              Basic Details
+              1. Farm Specifications
             </h2>
-            <div className="space-y-4">
+            <div className="grid sm:grid-cols-2 gap-4">
               <div>
                 <label className="label">Farm Name *</label>
                 <input
                   type="text"
-                  className={`input-field ${errors.name ? 'border-red-300 focus:ring-red-300/30 focus:border-red-400' : ''}`}
-                  placeholder="e.g., Green Valley Farm"
-                  value={form.name}
-                  onChange={(e) => updateField('name', e.target.value)}
+                  required
+                  className={`input-field ${errors.farmName ? 'border-red-300 focus:ring-red-300/30 focus:border-red-400' : ''}`}
+                  placeholder="e.g., Sunrise Agro Valley"
+                  value={farmName}
+                  onChange={(e) => {
+                    setFarmName(e.target.value);
+                    if (errors.farmName) setErrors((prev) => ({ ...prev, farmName: undefined }));
+                  }}
                 />
-                {errors.name && <p className="text-sm text-red-500 mt-1">{errors.name}</p>}
+                {errors.farmName && <p className="text-xs text-red-500 mt-1">{errors.farmName}</p>}
               </div>
 
               <div>
-                <label className="label">Location *</label>
+                <label className="label">Total Farm Area (Acres) *</label>
                 <div className="relative">
-                  <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <Ruler className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                   <input
-                    type="text"
-                    className={`input-field pl-10 ${errors.location ? 'border-red-300 focus:ring-red-300/30 focus:border-red-400' : ''}`}
-                    placeholder="Search or select your farm location on the map below..."
-                    value={form.location}
-                    onChange={(e) => updateField('location', e.target.value)}
+                    type="number"
+                    step="0.5"
+                    min="1"
+                    max="10000"
+                    required
+                    className={`input-field pl-10 ${errors.totalArea ? 'border-red-300 focus:ring-red-300/30 focus:border-red-400' : ''}`}
+                    placeholder="10"
+                    value={totalArea || ''}
+                    onChange={(e) => {
+                      const val = parseFloat(e.target.value) || 0;
+                      setTotalArea(val);
+                      if (errors.totalArea) setErrors((prev) => ({ ...prev, totalArea: undefined }));
+                    }}
                   />
                 </div>
-                {errors.location && <p className="text-sm text-red-500 mt-1">{errors.location}</p>}
+                {errors.totalArea && <p className="text-xs text-red-500 mt-1">{errors.totalArea}</p>}
               </div>
             </div>
           </div>
 
-          {/* Area & Zones */}
-          <div className="card">
-            <h2 className="section-title flex items-center gap-2 mb-4">
-              <Ruler className="w-4 h-4 text-farm-green" />
-              Calculated Area & Layout
-            </h2>
-            <div className="grid sm:grid-cols-2 gap-4">
-              <div>
-                <label className="label">Farm Area (Calculated from Boundary)</label>
-                <div className="p-3 bg-stone-50 border border-gray-200 rounded-xl">
-                  {form.area > 0 ? (
-                    <div className="flex items-baseline gap-2">
-                      <span className="text-xl font-extrabold text-farm-green">{form.area.toFixed(2)} acres</span>
-                      <span className="text-xs text-gray-500">({(form.area / 2.47105).toFixed(2)} hectares)</span>
-                    </div>
-                  ) : (
-                    <span className="text-sm text-gray-400 italic">Draw boundary on map to calculate area</span>
-                  )}
-                </div>
-                {errors.area && <p className="text-sm text-red-500 mt-1">{errors.area}</p>}
-              </div>
-
-              <div>
-                <label className="label flex items-center gap-2">
-                  <Grid3x3 className="w-3.5 h-3.5 text-gray-400" />
-                  Initial Field Zones *
-                </label>
-                <input
-                  type="number"
-                  className={`input-field ${errors.numberOfZones ? 'border-red-300 focus:ring-red-300/30 focus:border-red-400' : ''}`}
-                  placeholder="1"
-                  min="1"
-                  max="20"
-                  value={form.numberOfZones}
-                  onChange={(e) => updateField('numberOfZones', parseInt(e.target.value) || 1)}
-                />
-                {errors.numberOfZones && <p className="text-sm text-red-500 mt-1">{errors.numberOfZones}</p>}
-              </div>
-            </div>
-          </div>
-
-          {/* Farm Boundary — replaces the old Coordinates section */}
+          {/* Virtual Farm Workspace Card */}
           <div className="card">
             <h2 className="section-title flex items-center gap-2 mb-1">
-              <MapPin className="w-4 h-4 text-farm-green" />
-              Farm Boundary
+              <Sparkles className="w-4 h-4 text-farm-green" />
+              2. Virtual Farm Canvas & Zone Sketching
             </h2>
-            <p className="text-sm text-gray-400 mb-4">
-              Click points on the map to define your farm's boundary. You need at least 3 points to create a valid polygon.
-              Markers are draggable — adjust positions after placing.
+            <p className="text-xs text-gray-500 mb-5">
+              Partition your farm into zones. Assign crops, soil profiles, and irrigation systems to each zone.
             </p>
 
-            <BoundaryMapPicker
-              points={boundaryPoints}
-              onPointsChange={(pts) => {
-                setBoundaryPoints(pts);
-                if (errors.boundary) {
-                  setErrors((prev) => ({ ...prev, boundary: undefined }));
-                }
+            <VirtualFarmWorkspace
+              farmName={farmName}
+              totalArea={totalArea}
+              zones={zones}
+              onZonesChange={(updatedZones) => {
+                setZones(updatedZones);
+                if (errors.zones) setErrors((prev) => ({ ...prev, zones: undefined }));
               }}
-              locationQuery={form.location}
-              enteredAreaAcres={form.area}
-              initialCenter={mapCenter}
-              onLocationFound={(placeName, coords) => {
-                updateField('location', placeName);
-                updateField('latitude', coords[0]);
-                updateField('longitude', coords[1]);
-                setMapCenter(coords);
-              }}
-              onLocationDetailsChange={(details) => {
-                updateField('location', details.formattedLocation);
-                updateField('latitude', details.latitude);
-                updateField('longitude', details.longitude);
-                setMapCenter([details.latitude, details.longitude]);
-              }}
+              selectedZoneIndex={selectedZoneIndex}
+              onSelectZone={setSelectedZoneIndex}
             />
 
-            {errors.boundary && (
-              <p className="text-sm text-red-500 mt-2">{errors.boundary}</p>
+            {errors.zones && (
+              <p className="text-xs text-red-500 mt-3 font-semibold">{errors.zones}</p>
             )}
           </div>
 
-          {/* Preview Summary */}
-          <div className="bg-farm-green-pale/50 rounded-2xl p-5 border border-farm-green/10">
-            <h3 className="text-sm font-semibold text-farm-green mb-3">Farm Summary</h3>
-            <div className={`grid ${boundaryPoints.length >= 3 ? 'grid-cols-2 sm:grid-cols-4' : 'grid-cols-3'} gap-4 text-center`}>
-              <div>
-                <p className="text-2xl font-bold text-farm-green">{form.area || 0}</p>
-                <p className="text-xs text-farm-green/70">acres</p>
+          {/* Farm Creation Summary */}
+          <div className="bg-farm-green-pale/60 rounded-2xl p-5 border border-farm-green/15 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center text-farm-green shadow-xs">
+                <CheckCircle className="w-5 h-5 text-farm-green" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-farm-green">{form.numberOfZones || 0}</p>
-                <p className="text-xs text-farm-green/70">zones</p>
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-farm-green">
-                  {form.numberOfZones > 0 ? (form.area / form.numberOfZones).toFixed(1) : 0}
+                <h4 className="text-sm font-bold text-gray-900">
+                  {farmName ? farmName : 'New Digital Farm'}
+                </h4>
+                <p className="text-xs text-gray-600">
+                  {totalArea} acres total • {zones.length} configured field zones • {allocatedArea.toFixed(1)} acres planted
                 </p>
-                <p className="text-xs text-farm-green/70">acres/zone</p>
               </div>
-              {boundaryPoints.length >= 3 && mappedArea && (
-                <div>
-                  <p className="text-2xl font-bold text-farm-green">{mappedArea.acres}</p>
-                  <p className="text-xs text-farm-green/70">mapped acres</p>
-                </div>
-              )}
             </div>
-            {boundaryPoints.length >= 3 && (
-              <div className="mt-3 pt-3 border-t border-farm-green/10 text-xs text-farm-green/70 text-center">
-                Boundary: {boundaryPoints.length} points defined on map
-              </div>
-            )}
-          </div>
 
-          {/* Submit */}
-          <button
-            type="submit"
-            disabled={loading}
-            className="btn-primary w-full flex items-center justify-center gap-2 py-3.5 text-lg"
-          >
-            {loading ? (
-              <>
-                <Loader2 className="w-5 h-5 animate-spin" />
-                Creating Farm...
-              </>
-            ) : (
-              <>
-                Create Farm & Configure Zones
-                <ArrowRight className="w-5 h-5" />
-              </>
-            )}
-          </button>
+            <button
+              type="submit"
+              disabled={loading || allocatedArea > totalArea + 0.001}
+              className="btn-primary w-full sm:w-auto flex items-center justify-center gap-2 py-3 px-6 text-base shadow-md cursor-pointer"
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  Creating Virtual Farm...
+                </>
+              ) : (
+                <>
+                  Save Farm & Launch Dashboard
+                  <ArrowRight className="w-5 h-5" />
+                </>
+              )}
+            </button>
+          </div>
         </form>
       </div>
     </div>

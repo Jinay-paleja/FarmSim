@@ -19,7 +19,7 @@ class ContractModel(BaseModel):
 
 class FarmCreate(ContractModel):
     name: str = Field(min_length=1, max_length=120)
-    location: str = Field(min_length=1, max_length=255)
+    location: str = Field(default="Virtual Farm", max_length=255)
     location_name: str | None = None
     location_details: dict[str, Any] | None = None
     area_acres: float = Field(gt=0, le=100_000, validation_alias=AliasChoices("area_acres", "area", "total_area"))
@@ -46,13 +46,20 @@ class FarmCreate(ContractModel):
     phosphorus: float | None = None
     potassium: float | None = None
 
-    @field_validator("name", "location")
+    @field_validator("name")
     @classmethod
-    def non_blank(cls, value: str) -> str:
+    def name_non_blank(cls, value: str) -> str:
         value = value.strip()
         if not value:
             raise ValueError("must not be blank")
         return value
+
+    @field_validator("location", mode="before")
+    @classmethod
+    def location_default(cls, value: Any) -> str:
+        if not value or not str(value).strip():
+            return "Virtual Farm Workspace"
+        return str(value).strip()
 
 
 class FarmUpdate(ContractModel):
